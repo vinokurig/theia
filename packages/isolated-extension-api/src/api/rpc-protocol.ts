@@ -8,9 +8,14 @@
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
  */
-
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+// copied from https://github.com/Microsoft/vscode/blob/master/src/vs/workbench/services/extensions/node/rpcProtocol.ts
+// with small modifications
 import { Event } from '@theia/core/lib/common/event';
-import { LazyPromise } from './lazy-promise';
+import { ExtendedPromise } from './extended-promise';
 
 export interface MessageConnection {
     send(msg: {}): void;
@@ -49,7 +54,7 @@ export class RPCProtocolImpl implements RPCProtocol {
     private readonly proxies: { [id: string]: any; };
     private lastMessageId: number;
     private readonly invokedHandlers: { [req: string]: Promise<any>; };
-    private readonly pendingRPCReplies: { [msgId: string]: LazyPromise; };
+    private readonly pendingRPCReplies: { [msgId: string]: ExtendedPromise; };
     private readonly multiplexor: RPCMultiplexer;
 
     constructor(connection: MessageConnection) {
@@ -92,7 +97,7 @@ export class RPCProtocolImpl implements RPCProtocol {
         }
 
         const callId = String(++this.lastMessageId);
-        const result = new LazyPromise();
+        const result = new ExtendedPromise();
 
         this.pendingRPCReplies[callId] = result;
         this.multiplexor.send(MessageFactory.request(callId, proxyId, methodName, args));
@@ -143,7 +148,7 @@ export class RPCProtocolImpl implements RPCProtocol {
         const pendingReply = this.pendingRPCReplies[callId];
         delete this.pendingRPCReplies[callId];
 
-        pendingReply.resolveOk(msg.res);
+        pendingReply.resolve(msg.res);
     }
 
     private receiveReplyErr(msg: ReplyErrMessage): void {
@@ -162,7 +167,7 @@ export class RPCProtocolImpl implements RPCProtocol {
             err.message = msg.err.message;
             err.stack = msg.err.stack;
         }
-        pendingReply.resolveErr(err);
+        pendingReply.reject(err);
     }
 
     private invokeHandler(proxyId: string, methodName: string, args: any[]): Promise<any> {
