@@ -9,14 +9,14 @@
 import { DisposableCollection } from '@theia/core/lib/common';
 import URI from '@theia/core/lib/common/uri';
 import { EditorPreferenceChange, EditorPreferences, EditorDecorationsService, TextEditor, DiffNavigator } from '@theia/editor/lib/browser';
-import { DiffUris } from '@theia/editor/lib/browser/diff-uris';
+import { DiffUris } from '@theia/core/lib/browser/diff-uris';
 import { inject, injectable } from 'inversify';
 import { MonacoToProtocolConverter, ProtocolToMonacoConverter } from 'monaco-languageclient';
 
 import { MonacoCommandServiceFactory } from './monaco-command-service';
 import { MonacoContextMenuService } from './monaco-context-menu';
 import { MonacoDiffEditor } from './monaco-diff-editor';
-import { MonacoDiffNavigatorFactory } from './monaco-diff-nagivator-factory';
+import { MonacoDiffNavigatorFactory } from './monaco-diff-navigator-factory';
 import { MonacoEditor } from './monaco-editor';
 import { MonacoEditorModel } from './monaco-editor-model';
 import { MonacoEditorService } from './monaco-editor-service';

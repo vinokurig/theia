@@ -9,7 +9,7 @@ import { Position, Range } from 'vscode-languageserver-types';
 import * as lsp from 'vscode-languageserver-types';
 import URI from "@theia/core/lib/common/uri";
 import { Event, Disposable } from '@theia/core/lib/common';
-import { Saveable } from '@theia/core/lib/browser';
+import { Saveable, Navigatable } from '@theia/core/lib/browser';
 import { EditorDecoration } from './editor-decorations-service';
 
 export {
@@ -20,9 +20,10 @@ export const TextEditorProvider = Symbol('TextEditorProvider');
 export type TextEditorProvider = (uri: URI) => Promise<TextEditor>;
 
 export interface TextEditorDocument extends lsp.TextDocument, Saveable, Disposable {
+    getLineContent(lineNumber: number): string;
 }
 
-export interface TextEditor extends Disposable, TextEditorSelection {
+export interface TextEditor extends Disposable, TextEditorSelection, Navigatable {
     readonly node: HTMLElement;
 
     readonly uri: URI;

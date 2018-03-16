@@ -11,7 +11,7 @@ import { Disposable } from '@theia/core/lib/common';
 import { Dimension, EditorDecorationsService, DiffNavigator, DeltaDecorationParams } from '@theia/editor/lib/browser';
 import { MonacoEditorModel } from './monaco-editor-model';
 import { MonacoEditor } from './monaco-editor';
-import { MonacoDiffNavigatorFactory } from './monaco-diff-nagivator-factory';
+import { MonacoDiffNavigatorFactory } from './monaco-diff-navigator-factory';
 
 import IStandaloneDiffEditor = monaco.editor.IStandaloneDiffEditor;
 import IDiffEditorConstructionOptions = monaco.editor.IDiffEditorConstructionOptions;
@@ -47,6 +47,16 @@ export class MonacoDiffEditor extends MonacoEditor {
         this._diffEditor.setModel({ original, modified });
     }
 
+    getTargetUri(): URI | undefined {
+        if (this.diffEditor.getModifiedEditor().getModel().uri.scheme === 'file') {
+            return new URI(this.modifiedModel.uri);
+        }
+        if (this.diffEditor.getOriginalEditor().getModel().uri.scheme === 'file') {
+            return new URI(this.originalModel.uri);
+        }
+        return undefined;
+    }
+
     get diffEditor(): IStandaloneDiffEditor {
         return this._diffEditor;
     }
@@ -59,7 +69,7 @@ export class MonacoDiffEditor extends MonacoEditor {
         this._diffEditor = monaco.editor.createDiffEditor(this.node, <IDiffEditorConstructionOptions>{
             ...options,
             fixedOverflowWidgets: true
-        });
+        }, override);
         this.editor = this._diffEditor.getModifiedEditor();
         return this._diffEditor;
     }
