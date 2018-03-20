@@ -9,10 +9,10 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 import { MAIN_RPC_CONTEXT } from '../api/extension-api';
-import { Disposable } from '@theia/core/lib/common/disposable';
 import { RPCProtocol } from '../api/rpc-protocol';
 import * as theia from 'theia';
 import { CommandRegistryImpl } from './comand-registry';
+import { Disposable } from './types-impl';
 
 export function createAPI(rpc: RPCProtocol): typeof theia {
     const commandRegistryExt = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
@@ -23,7 +23,8 @@ export function createAPI(rpc: RPCProtocol): typeof theia {
         }
     };
     return <typeof theia>{
-        commands
+        commands,
+        Disposable: Disposable
     };
 
 }

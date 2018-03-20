@@ -8,9 +8,21 @@
  * Contributors:
  *   Red Hat, Inc. - initial API and implementation
  */
-//import { Disposable } from '@theia/core/lib/common/disposable';
 
 declare module 'theia' {
+
+    export class Disposable {
+
+        constructor(func: () => void);
+        /**
+         * Dispose this object.
+         */
+        dispose(): void;
+
+        static create(func: () => void): Disposable;
+
+    }
+
     /**
      * A command is a unique identifier of a function
      * which can be executed by a user via a keyboard shortcut,

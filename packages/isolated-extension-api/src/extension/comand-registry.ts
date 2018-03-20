@@ -9,9 +9,9 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 import { CommandRegistryExt, EXTENSION_RPC_CONTEXT as Ext, CommandRegistryMain } from '../api/extension-api';
-import { Disposable } from '@theia/core/lib/common/disposable';
 import { RPCProtocol } from '../api/rpc-protocol';
 import * as theia from 'theia';
+import { Disposable } from './types-impl';
 
 export type Handler = <T>(...args: any[]) => T | PromiseLike<T>;
 
