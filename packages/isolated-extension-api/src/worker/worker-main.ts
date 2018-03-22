@@ -12,8 +12,15 @@
 import { RPCProtocolImpl } from '../api/rpc-protocol';
 import { Emitter } from '@theia/core/lib/common/event';
 import { createAPI } from '../extension/extension-context';
+import { MAIN_RPC_CONTEXT } from '../api/extension-api';
+import { HostedExtensionManagerExtImpl } from '../extension/hosted-extension-manager';
 
-const ctx: DedicatedWorkerGlobalScope = self as any;
+const ctx = self as any;
+
+const registerPlugin = function (pluginId: string, start: (api: any) => void, stop?: () => void): void {
+    console.log(`Extension: ${pluginId} loaded.`);
+    start(theia);
+};
 
 const emmitter = new Emitter();
 const rpc = new RPCProtocolImpl({
@@ -26,7 +33,16 @@ addEventListener('message', (message: any) => {
     emmitter.fire(message.data);
 });
 
-const api = createAPI(rpc);
-api.commands.registerCommand({ id: 'fooBar', label: 'Command From Extension' }, () => {
-    console.log("Hello from WebWorker Command");
-});
+const theia = createAPI(rpc);
+if (registerPlugin) {
+    ctx['registerPlugin'] = registerPlugin;
+}
+// api.commands.registerCommand({ id: 'fooBar', label: 'Command From Extension' }, () => {
+//     console.log("Hello from WebWorker Command");
+// });
+
+rpc.set(MAIN_RPC_CONTEXT.HOSTED_EXTENSION_MANAGER_EXT, new HostedExtensionManagerExtImpl({
+    loadExtension(path: string): void {
+        ctx.importScripts('/hostedExtension/' + path);
+    }
+}));

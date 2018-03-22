@@ -10,6 +10,18 @@
  */
 import { createProxyIdentifier, ProxyIdentifier } from './rpc-protocol';
 import * as theia from 'theia';
+
+export interface HostedExtensionManagerExt {
+    loadExtension(ext: Extension): void;
+}
+
+export interface Extension {
+    name: string;
+    publisher: string;
+    version: string;
+    extPath: string;
+}
+
 /**
  * A command handler is an implementation of a command.
  *
@@ -54,5 +66,6 @@ export const EXTENSION_RPC_CONTEXT = {
 };
 
 export const MAIN_RPC_CONTEXT = {
+    HOSTED_EXTENSION_MANAGER_EXT: createProxyIdentifier<HostedExtensionManagerExt>("HostedExtensionManagerExt"),
     COMMAND_REGISTRY_EXT: createProxyIdentifier<CommandRegistryExt>("CommandRegistryExt")
 };

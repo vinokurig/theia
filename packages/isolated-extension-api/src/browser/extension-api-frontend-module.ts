@@ -11,19 +11,26 @@
 import { ContainerModule } from "inversify";
 import { FrontendApplicationContribution, FrontendApplication } from "@theia/core/lib/browser";
 import { MaybePromise } from "@theia/core/lib/common";
+import { WebSocketConnectionProvider } from '@theia/core/lib/browser/messaging';
 import { ExtensionWorker } from './extension-worker';
-import { CommandRegistryMainImpl } from './command-registry-main';
-import { EXTENSION_RPC_CONTEXT } from '../api/extension-api';
+import { HostedExtensionServer, hostedServicePath } from '../common/extension-protocol';
+import { HostedExtensionSupport } from './hosted-extension';
+import { setUpExtensionApi } from './main-context';
 
 export default new ContainerModule(bind => {
     bind(ExtensionWorker).toSelf().inSingletonScope();
-    bind(CommandRegistryMainImpl).toSelf().inSingletonScope();
-    // bind(FrontendApplicationContribution).toService(ExtensionWorker);
+    bind(HostedExtensionSupport).toSelf().inSingletonScope();
+
     bind(FrontendApplicationContribution).toDynamicValue(ctx => ({
         onStart(app: FrontendApplication): MaybePromise<void> {
             const worker = ctx.container.get(ExtensionWorker);
-            const commandRegistryMain = ctx.container.get(CommandRegistryMainImpl);
-            worker.rpc.set(EXTENSION_RPC_CONTEXT.COMMAND_REGISTRY_MAIN, commandRegistryMain);
+
+            setUpExtensionApi(worker.rpc, ctx.container);
+            ctx.container.get(HostedExtensionSupport).checkAndLoadExtension(ctx.container);
         }
     }));
+    bind(HostedExtensionServer).toDynamicValue(ctx => {
+        const connection = ctx.container.get(WebSocketConnectionProvider);
+        return connection.createProxy<HostedExtensionServer>(hostedServicePath);
+    });
 });

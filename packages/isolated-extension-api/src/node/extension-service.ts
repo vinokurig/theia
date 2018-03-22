@@ -9,8 +9,10 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 import * as express from 'express';
+import { injectable, inject } from "inversify";
 import { BackendApplicationContribution } from '@theia/core/lib/node/backend-application';
-import { injectable } from "inversify";
+import { HostedExtensionServer, HostedExtensionClient, Extension } from '../common/extension-protocol';
+import { HostedExtensionReader } from './extension-reader';
 
 const extensionPath = (process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE) + './theia/extensions/';
 
@@ -21,5 +23,24 @@ export class ExtensionApiContribution implements BackendApplicationContribution 
             const filePath: string = req.params.path;
             res.sendFile(extensionPath + filePath);
         });
+    }
+}
+
+@injectable()
+export class HostedExtensionServerImpl implements HostedExtensionServer {
+
+    // private client: HostedExtensionClient;
+
+    constructor( @inject(HostedExtensionReader) private readonly reader: HostedExtensionReader) {
+    }
+
+    dispose(): void {
+        throw new Error("Method not implemented.");
+    }
+    setClient(client: HostedExtensionClient): void {
+        //  this.client = client;
+    }
+    getHostedExtension(): Promise<Extension | undefined> {
+        return Promise.resolve(this.reader.getExtension());
     }
 }

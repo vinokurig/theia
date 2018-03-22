@@ -10,10 +10,25 @@
  */
 
 import { ContainerModule } from "inversify";
-import { ExtensionApiContribution } from './extension-service';
+import { ConnectionHandler, JsonRpcConnectionHandler } from "@theia/core/lib/common/messaging";
 import { BackendApplicationContribution } from '@theia/core/lib/node/backend-application';
+import { ExtensionApiContribution, HostedExtensionServerImpl } from './extension-service';
+import { HostedExtensionReader } from './extension-reader';
+import { HostedExtensionClient, HostedExtensionServer, hostedServicePath } from '../common/extension-protocol';
 
 export default new ContainerModule(bind => {
     bind(ExtensionApiContribution).toSelf().inSingletonScope();
+    bind(HostedExtensionReader).toSelf().inSingletonScope();
+    bind(HostedExtensionServer).to(HostedExtensionServerImpl).inSingletonScope();
+
     bind(BackendApplicationContribution).toDynamicValue(ctx => ctx.container.get(ExtensionApiContribution)).inSingletonScope();
+    bind(BackendApplicationContribution).toDynamicValue(ctx => ctx.container.get(HostedExtensionReader)).inSingletonScope();
+
+    bind(ConnectionHandler).toDynamicValue(ctx =>
+        new JsonRpcConnectionHandler<HostedExtensionClient>(hostedServicePath, client => {
+            const server = ctx.container.get<HostedExtensionServer>(HostedExtensionServer);
+            server.setClient(client);
+            return server;
+        })
+    ).inSingletonScope();
 });

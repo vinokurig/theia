@@ -9,20 +9,19 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 import { CommandRegistryExt, MAIN_RPC_CONTEXT, CommandRegistryMain } from '../api/extension-api';
-import { injectable, inject } from "inversify";
+import { interfaces } from "inversify";
 import { CommandRegistry } from '@theia/core/lib/common/command';
-import { ExtensionWorker } from './extension-worker';
 import * as theia from 'theia';
 import { Disposable } from '@theia/core/lib/common/disposable';
+import { RPCProtocol } from '../api/rpc-protocol';
 
-@injectable()
 export class CommandRegistryMainImpl implements CommandRegistryMain {
     private proxy: CommandRegistryExt;
     private disposables = new Map<string, Disposable>();
-
-    constructor( @inject(CommandRegistry) private readonly delegate: CommandRegistry,
-        @inject(ExtensionWorker) worker: ExtensionWorker) {
-        this.proxy = worker.rpc.getProxy(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT);
+    private delegate: CommandRegistry;
+    constructor(rpc: RPCProtocol, container: interfaces.Container) {
+        this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT);
+        this.delegate = container.get(CommandRegistry);
     }
 
     registerCommand(command: theia.Command): void {
