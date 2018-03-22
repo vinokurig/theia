@@ -10,6 +10,7 @@ import { Git, Repository, WorkingDirectoryStatus } from '../common';
 import { Event, Emitter, DisposableCollection } from "@theia/core";
 import { GitRepositoryProvider } from './git-repository-provider';
 import { GitWatcher, GitStatusChangeEvent } from "../common/git-watcher";
+import URI from "@theia/core/lib/common/uri";
 
 /**
  * The repository tracker watches the selected repository for status changes. It provides a convenient way to listen on status updates.
@@ -82,6 +83,29 @@ export class GitRepositoryTracker {
      */
     get onGitEvent(): Event<GitStatusChangeEvent> {
         return this.onGitEventEmitter.event;
+    }
+
+    getPath(uri: URI): string | undefined {
+        const repository = this.selectedRepository;
+        if (!repository) {
+            return undefined;
+        }
+        const repositoryUri = new URI(repository.localUri);
+        const repositoryPath = repositoryUri.path.toString();
+        const path = uri.path.toString();
+        if (!path.startsWith(repositoryPath)) {
+            return undefined;
+        }
+        const relativePath = path.substr(repositoryPath.length);
+        return relativePath[0] === '/' ? relativePath.substr(1) : relativePath;
+    }
+
+    getUri(path: string): URI | undefined {
+        const repository = this.selectedRepository;
+        if (!repository) {
+            return undefined;
+        }
+        return new URI(repository.localUri).resolve(path);
     }
 
 }

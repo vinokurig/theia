@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 TypeFox and others.
+ * Copyright (C) 2018 TypeFox and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -26,7 +26,11 @@ import { IStatusResult, IAheadBehind, AppFileStatus, WorkingDirectoryStatus as D
 import { Branch as DugiteBranch } from 'dugite-extra/lib/model/branch';
 import { Commit as DugiteCommit, CommitIdentity as DugiteCommitIdentity } from 'dugite-extra/lib/model/commit';
 import { ILogger } from '@theia/core';
-import { Git, GitUtils, Repository, WorkingDirectoryStatus, GitFileChange, GitFileStatus, Branch, Commit, CommitIdentity, GitResult, CommitWithChanges } from '../common';
+import * as strings from '@theia/core/lib/common/strings';
+import {
+    Git, GitUtils, Repository, WorkingDirectoryStatus, GitFileChange, GitFileStatus, Branch, Commit,
+    CommitIdentity, GitResult, CommitWithChanges, GitFileBlame, CommitLine
+} from '../common';
 import { GitRepositoryManager } from './git-repository-manager';
 import { GitLocator } from './git-locator/git-locator-protocol';
 
@@ -127,13 +131,13 @@ export class CommitDetailsParser extends OutputParser<CommitWithChanges> {
         const chunks = this.split(input, delimiter);
         const changes: CommitWithChanges[] = [];
         for (const chunk of chunks) {
-            const [sha, email, name, timestamp, authorDateRelative, summary, body, rawChanges] = chunk.trim().split(CommitDetailsParser.ENTRY_DELIMITER);
-            const date = this.toDate(timestamp);
+            const [sha, email, name, timeAsString, authorDateRelative, summary, body, rawChanges] = chunk.trim().split(CommitDetailsParser.ENTRY_DELIMITER);
+            const timestamp = parseInt(timeAsString, 10);
             const fileChanges = this.nameStatusParser.parse(repositoryUri, (rawChanges || '').trim());
             changes.push({
                 sha,
                 author: {
-                    date, email, name
+                    timestamp, email, name
                 },
                 authorDateRelative,
                 summary,
@@ -148,12 +152,124 @@ export class CommitDetailsParser extends OutputParser<CommitWithChanges> {
         return '%x02' + placeholders.join('%x01') + '%x01';
     }
 
-    protected toDate(epochSeconds: string | undefined): Date {
-        const date = new Date(0);
-        if (epochSeconds) {
-            date.setUTCSeconds(Number.parseInt(epochSeconds));
+}
+
+@injectable()
+export class GitBlameParser {
+
+    async parse(fileUri: string, gitBlameOutput: string, commitBody: (sha: string) => Promise<string>): Promise<GitFileBlame | undefined> {
+        if (!gitBlameOutput) {
+            return undefined;
         }
-        return date;
+        const parsedEntries = this.parseEntries(gitBlameOutput);
+        return await this.createFileBlame(fileUri, parsedEntries, commitBody);
+    }
+
+    protected parseEntries(rawOutput: string): GitBlameParser.Entry[] {
+        const result: GitBlameParser.Entry[] = [];
+        let current: GitBlameParser.Entry | undefined;
+        for (const line of strings.split(rawOutput, '\n')) {
+            if (current === undefined) {
+                current = {};
+            }
+            if (GitBlameParser.pumpEntry(current, line)) {
+                result.push(current);
+                current = undefined;
+            }
+        }
+        return result;
+    }
+
+    protected async createFileBlame(uri: string, blameEntries: GitBlameParser.Entry[], commitBody: (sha: string) => Promise<string>): Promise<GitFileBlame> {
+        const commits = new Map<string, Commit>();
+        const lines: CommitLine[] = [];
+        for (const entry of blameEntries) {
+            const sha = entry.sha!;
+            let commit = commits.get(sha);
+            if (!commit) {
+                commit = <Commit>{
+                    sha,
+                    author: {
+                        name: entry.author,
+                        email: entry.authorMail,
+                        timestamp: entry.authorTime,
+                        tzOffset: entry.authorTz,
+                    },
+                    summary: entry.summary,
+                    body: await commitBody(sha)
+                };
+                commits.set(sha, commit);
+            }
+            const lineCount = entry.lineCount!;
+            for (let lineOffset = 0; lineOffset < lineCount; lineOffset++) {
+                const line = <CommitLine>{
+                    sha,
+                    line: entry.line! + lineOffset
+                };
+                lines[line.line] = line;
+            }
+        }
+        const fileBlame = <GitFileBlame>{ uri, commits: Array.from(commits.values()), lines };
+        return fileBlame;
+    }
+
+}
+
+export namespace GitBlameParser {
+    export interface Entry {
+        fileName?: string,
+        sha?: string,
+        previousSha?: string,
+        line?: number,
+        lineCount?: number,
+        author?: string,
+        authorMail?: string,
+        authorTime?: number,
+        /**
+         * Timezone offset, e.g. UTC/GMT+2 === 200
+         */
+        authorTz?: number,
+        summary?: string,
+    }
+
+    export function isUncommittedSha(sha: string | undefined) {
+        return (sha || '').startsWith('0000000');
+    }
+
+    export function pumpEntry(entry: Entry, outputLine: string): boolean {
+        const parts = outputLine.split(' ');
+        if (parts.length < 2) {
+            return false;
+        }
+        const uncommitted = isUncommittedSha(entry.sha);
+        const firstPart = parts[0];
+        if (entry.sha === undefined) {
+            entry.sha = firstPart;
+            entry.line = parseInt(parts[2], 10) - 1; // to zero based
+            entry.lineCount = parseInt(parts[3], 10);
+        } else if (firstPart === 'author') {
+            entry.author = uncommitted ? 'You' : parts.slice(1).join(' ');
+        } else if (firstPart === 'author-mail') {
+            const rest = parts.slice(1).join(' ');
+            const matches = rest.match(/(<(.*)>)/);
+            entry.authorMail = matches ? matches[2] : rest;
+        } else if (firstPart === 'author-time') {
+            entry.authorTime = parseInt(parts[1], 10) * 1000;
+        } else if (firstPart === 'author-tz') {
+            entry.authorTz = parseInt(parts[1], 10);
+        } else if (firstPart === 'summary') {
+            let summary = parts.slice(1).join(' ');
+            if (summary.startsWith('"') && summary.endsWith('"')) {
+                summary = summary.substr(1, summary.length - 2);
+            }
+            entry.summary = uncommitted ? 'uncommitted' : summary;
+        } else if (firstPart === 'previous') {
+            entry.previousSha = parts[1];
+        } else if (firstPart === 'filename') {
+            entry.fileName = parts.slice(1).join(' ');
+            return true;
+        }
+        return false;
     }
 
 }
@@ -178,6 +294,9 @@ export class DugiteGit implements Git {
 
     @inject(CommitDetailsParser)
     protected readonly commitDetailsParser: CommitDetailsParser;
+
+    @inject(GitBlameParser)
+    protected readonly blameParser: GitBlameParser;
 
     dispose(): void {
         this.locator.dispose();
@@ -398,6 +517,38 @@ export class DugiteGit implements Git {
                 .filter(item => item && item.length > 0));
     }
 
+    async blame(repository: Repository, uri: string, options?: Git.Options.Blame): Promise<GitFileBlame | undefined> {
+        const args = ['blame', '--root', '--incremental'];
+        const file = Path.relative(this.getFsPath(repository), this.getFsPath(uri));
+        const repositoryPath = this.getFsPath(repository);
+        const dugiteStatus = await getStatus(repositoryPath);
+        const isUncommitted = (change: DugiteFileChange) => change.status === AppFileStatus.New && change.path === file;
+        const changes = dugiteStatus.workingDirectory.files;
+        if (changes.some(isUncommitted)) {
+            return undefined;
+        }
+        const stdin = options ? options.content : undefined;
+        if (stdin) {
+            args.push('--contents', '-');
+        }
+        const gitResult = await this.exec(repository, [...args, '--', file], { stdin });
+        const output = gitResult.stdout.trim();
+        const commitBodyReader = async (sha: string) => {
+            if (GitBlameParser.isUncommittedSha(sha)) {
+                return '';
+            }
+            const revResult = await this.exec(repository, ['rev-list', '--format=%B', '--max-count=1', sha]);
+            const revOutput = revResult.stdout;
+            let nl = revOutput.indexOf('\n');
+            if (nl > 0) {
+                nl = revOutput.indexOf('\n', nl + 1);
+            }
+            return revOutput.substr(Math.max(0, nl)).trim();
+        };
+        const blame = await this.blameParser.parse(uri, output, commitBodyReader);
+        return blame;
+    }
+
     private getCommitish(options?: Git.Options.Show): string {
         if (options && options.commitish) {
             return 'index' === options.commitish ? '' : options.commitish;
@@ -486,7 +637,7 @@ export class DugiteGit implements Git {
 
     private async mapCommitIdentity(toMap: DugiteCommitIdentity): Promise<CommitIdentity> {
         return {
-            date: toMap.date,
+            timestamp: toMap.date.getTime(),
             email: toMap.email,
             name: toMap.name,
             tzOffset: toMap.tzOffset

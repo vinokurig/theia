@@ -55,6 +55,8 @@ all of MD as it is not optimized for dense, information rich UIs.
     --theia-ui-font-color1: var(--md-grey-300);
     --theia-ui-font-color2: var(--md-grey-600);
     --theia-ui-font-color3: var(--md-grey-700);
+    --theia-ui-font-color4: var(--md-grey-800);
+    --theia-ui-font-color5: var(--md-grey-900);
 
     /* Special font colors */
     --theia-ui-icon-font-color: #D4D4D4;
@@ -149,6 +151,9 @@ all of MD as it is not optimized for dense, information rich UIs.
   --theia-added-color0: rgba(0, 255, 0, 0.8);
   --theia-removed-color0: rgba(230, 0, 0, 0.8);
   --theia-modified-color0: rgba(0, 100, 150, 0.8);
+
+  --theia-highlight-background-color: var(--md-purple-A400);
+  --theia-highlight-color: var(--theia-content-font-color0);
 
   /* icons */
   --theia-icon-close: url(../icons/close-dark.svg);

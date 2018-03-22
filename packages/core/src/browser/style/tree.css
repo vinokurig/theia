@@ -12,6 +12,7 @@
     font-size: var(--theia-ui-font-size1);
     transform: translateY(var(--theia-border-width));
     max-height: calc(100% - var(--theia-border-width));
+    position: relative;
 }
 
 .theia-Tree:focus {
@@ -50,14 +51,6 @@
     background: var(--theia-accent-color5);
 }
 
-.theia-Tree:focus .theia-TreeNode.theia-mod-focus {
-    background: var(--theia-accent-color3);
-}
-
-.theia-Tree:not(:focus) .theia-TreeNode.theia-mod-focus {
-    background: var(--theia-accent-color5);
-}
-
 .theia-TreeNodeSegment {
     flex-grow: 0;
     user-select: none;
@@ -75,3 +68,7 @@
     text-align: center;
 }
 
+.theia-TreeNodeSegment mark {
+    background-color: var(--theia-highlight-background-color);
+    color: var(--theia-highlight-color);
+}
