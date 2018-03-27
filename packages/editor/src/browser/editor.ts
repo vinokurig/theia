@@ -23,12 +23,22 @@ export interface TextEditorDocument extends lsp.TextDocument, Saveable, Disposab
     getLineContent(lineNumber: number): string;
 }
 
+export interface TextDocumentContentChangeDelta extends lsp.TextDocumentContentChangeEvent {
+    readonly range: Range;
+    readonly rangeLength: number;
+}
+
+export interface TextDocumentChangeEvent {
+    readonly document: TextEditorDocument;
+    readonly contentChanges: TextDocumentContentChangeDelta[];
+}
+
 export interface TextEditor extends Disposable, TextEditorSelection, Navigatable {
     readonly node: HTMLElement;
 
     readonly uri: URI;
     readonly document: TextEditorDocument;
-    readonly onDocumentContentChanged: Event<TextEditorDocument>;
+    readonly onDocumentContentChanged: Event<TextDocumentChangeEvent>;
 
     cursor: Position;
     readonly onCursorPositionChanged: Event<Position>;
