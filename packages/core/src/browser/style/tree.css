@@ -8,7 +8,7 @@
 .theia-Tree {
     overflow: hidden;
     color: var(--theia-ui-font-color1);
-    background: var(--theia-layout-color3);
+    background: var(--theia-layout-color0);
     font-size: var(--theia-ui-font-size1);
     max-height: calc(100% - var(--theia-border-width));
     position: relative;
