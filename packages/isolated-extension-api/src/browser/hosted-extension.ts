@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Red Hat, Inc.
+ * Copyright (C) 2018 Red Hat, Inc.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,12 +13,14 @@ import { HostedExtensionServer, Extension } from '../common/extension-protocol';
 import { ExtensionWorker } from './extension-worker';
 import { setUpExtensionApi } from './main-context';
 import { MAIN_RPC_CONTEXT } from '../api/extension-api';
-
+import { HostedExtensionWatcher } from './hosted-extension-watcher';
+import { RPCProtocol, RPCProtocolImpl } from '../api/rpc-protocol';
 @injectable()
 export class HostedExtensionSupport {
     private worker: ExtensionWorker;
 
-    constructor( @inject(HostedExtensionServer) private readonly server: HostedExtensionServer) {
+    constructor( @inject(HostedExtensionServer) private readonly server: HostedExtensionServer,
+        @inject(HostedExtensionWatcher) private readonly watcher: HostedExtensionWatcher) {
     }
 
     checkAndLoadExtension(container: interfaces.Container): void {
@@ -42,5 +44,23 @@ export class HostedExtensionSupport {
                 version: extension.version
             });
         }
+        if (extension.theiaExtension!.node) {
+            const rpc = this.createServerRpc();
+            setUpExtensionApi(rpc, container);
+            const hostedExtManager = rpc.getProxy(MAIN_RPC_CONTEXT.HOSTED_EXTENSION_MANAGER_EXT);
+            hostedExtManager.loadExtension({
+                extPath: extension.theiaExtension.node!,
+                name: extension.name,
+                publisher: extension.publisher,
+                version: extension.version
+            });
+        }
+    }
+
+    private createServerRpc(): RPCProtocol {
+        return new RPCProtocolImpl({
+            onMessage: this.watcher.onPostMessageEvent,
+            send: message => this.server.onMessage(JSON.stringify(message))
+        });
     }
 }

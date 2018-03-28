@@ -21,10 +21,11 @@ export interface Extension {
 
 export const HostedExtensionClient = Symbol('HostedExtensionClient');
 export interface HostedExtensionClient {
-
+    postMessage(message: string): Promise<void>;
 }
 
 export const HostedExtensionServer = Symbol('HostedExtensionServer');
 export interface HostedExtensionServer extends JsonRpcServer<HostedExtensionClient> {
     getHostedExtension(): Promise<Extension | undefined>;
+    onMessage(message: string): Promise<void>;
 }

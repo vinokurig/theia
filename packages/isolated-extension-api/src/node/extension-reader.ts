@@ -13,6 +13,7 @@ import { injectable } from "inversify";
 import * as express from 'express';
 import * as fs from 'fs';
 import { Extension } from '../common/extension-protocol';
+import { resolve } from 'path';
 
 @injectable()
 export class HostedExtensionReader implements BackendApplicationContribution {
@@ -47,7 +48,9 @@ export class HostedExtensionReader implements BackendApplicationContribution {
         if (fs.existsSync(packageJsonPath)) {
             const extension: Extension = require(packageJsonPath);
             this.extension = extension;
-            console.log(JSON.stringify(extension));
+            if (extension.theiaExtension.node) {
+                extension.theiaExtension.node = resolve(path, extension.theiaExtension.node);
+            }
         } else {
             this.extension = undefined;
         }

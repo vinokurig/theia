@@ -20,6 +20,7 @@ export class HostedExtensionManagerExtImpl implements HostedExtensionManagerExt 
     }
 
     loadExtension(ext: Extension): void {
+        console.error("Do load ext: " + ext.extPath);
         this.loader.loadExtension(ext.extPath);
     }
 

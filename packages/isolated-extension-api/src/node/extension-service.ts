@@ -13,6 +13,7 @@ import { injectable, inject } from "inversify";
 import { BackendApplicationContribution } from '@theia/core/lib/node/backend-application';
 import { HostedExtensionServer, HostedExtensionClient, Extension } from '../common/extension-protocol';
 import { HostedExtensionReader } from './extension-reader';
+import { HostedExtensionSupport } from './hosted-extension';
 
 const extensionPath = (process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE) + './theia/extensions/';
 
@@ -29,18 +30,26 @@ export class ExtensionApiContribution implements BackendApplicationContribution 
 @injectable()
 export class HostedExtensionServerImpl implements HostedExtensionServer {
 
-    // private client: HostedExtensionClient;
-
-    constructor( @inject(HostedExtensionReader) private readonly reader: HostedExtensionReader) {
+    constructor( @inject(HostedExtensionReader) private readonly reader: HostedExtensionReader,
+        @inject(HostedExtensionSupport) private readonly hostedExtension: HostedExtensionSupport) {
     }
 
     dispose(): void {
         throw new Error("Method not implemented.");
     }
     setClient(client: HostedExtensionClient): void {
-        //  this.client = client;
+        this.hostedExtension.setClient(client);
     }
     getHostedExtension(): Promise<Extension | undefined> {
+        const ext = this.reader.getExtension();
+        if (ext) {
+            this.hostedExtension.runExtension(ext);
+        }
         return Promise.resolve(this.reader.getExtension());
+    }
+
+    onMessage(message: string): Promise<void> {
+        this.hostedExtension.onMessage(message);
+        return Promise.resolve();
     }
 }
