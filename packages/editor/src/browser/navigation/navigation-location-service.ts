@@ -9,6 +9,7 @@ import { inject, injectable } from 'inversify';
 import { ILogger } from '@theia/core/lib/common/logger';
 import { OpenerService, OpenerOptions, open } from '@theia/core/lib/browser/opener-service';
 import { EditorOpenerOptions } from '../editor-manager';
+import { NavigationLocationUpdater } from './navigation-location-updater';
 import { NavigationLocationSimilarity } from './navigation-location-similarity';
 import { ContentChangeLocation, CursorLocation, NavigationLocation, SelectionLocation, Position } from './navigation-location';
 
@@ -42,11 +43,14 @@ export class NavigationLocationService {
     @inject(OpenerService)
     protected readonly openerService: OpenerService;
 
-    @inject(NavigationLocationServiceConfiguration)
-    protected readonly configuration: NavigationLocationServiceConfiguration;
+    @inject(NavigationLocationUpdater)
+    protected readonly updater: NavigationLocationUpdater;
 
     @inject(NavigationLocationSimilarity)
     protected readonly similarity: NavigationLocationSimilarity;
+
+    @inject(NavigationLocationServiceConfiguration)
+    protected readonly configuration: NavigationLocationServiceConfiguration;
 
     protected pointer = -1;
     protected stack: NavigationLocation[] = [];
