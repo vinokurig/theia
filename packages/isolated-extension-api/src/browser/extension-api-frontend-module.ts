@@ -9,19 +9,25 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 import { ContainerModule } from "inversify";
-import { FrontendApplicationContribution, FrontendApplication } from "@theia/core/lib/browser";
-import { MaybePromise } from "@theia/core/lib/common";
+import { FrontendApplicationContribution, FrontendApplication, KeybindingContribution } from "@theia/core/lib/browser";
+import { MaybePromise, CommandContribution } from "@theia/core/lib/common";
 import { WebSocketConnectionProvider } from '@theia/core/lib/browser/messaging';
 import { ExtensionWorker } from './extension-worker';
 import { HostedExtensionServer, hostedServicePath } from '../common/extension-protocol';
 import { HostedExtensionSupport } from './hosted-extension';
 import { setUpExtensionApi } from './main-context';
 import { HostedExtensionWatcher } from './hosted-extension-watcher';
+import { PluginApiFrontendContribution } from './plugin-api-contribution';
 
 export default new ContainerModule(bind => {
     bind(ExtensionWorker).toSelf().inSingletonScope();
     bind(HostedExtensionSupport).toSelf().inSingletonScope();
     bind(HostedExtensionWatcher).toSelf().inSingletonScope();
+
+    bind(PluginApiFrontendContribution).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toDynamicValue(c => c.container.get(PluginApiFrontendContribution));
+    bind(CommandContribution).toDynamicValue(c => c.container.get(PluginApiFrontendContribution));
+    bind(KeybindingContribution).toDynamicValue(c => c.container.get(PluginApiFrontendContribution));
 
     bind(FrontendApplicationContribution).toDynamicValue(ctx => ({
         onStart(app: FrontendApplication): MaybePromise<void> {

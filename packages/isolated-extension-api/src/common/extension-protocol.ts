@@ -28,4 +28,10 @@ export const HostedExtensionServer = Symbol('HostedExtensionServer');
 export interface HostedExtensionServer extends JsonRpcServer<HostedExtensionClient> {
     getHostedExtension(): Promise<Extension | undefined>;
     onMessage(message: string): Promise<void>;
+
+    isValidPlugin(uri: string): Promise<boolean>;
+    runHostedPlugin(uri: string): Promise<string>;
+    terminateHostedPluginInstance(): Promise<void>;
+    isHostedPluginRunning(): Promise<boolean>;
+    getHostedPluginInstanceURI(): Promise<string>;
 }

@@ -16,12 +16,14 @@ import { ExtensionApiContribution, HostedExtensionServerImpl } from './extension
 import { HostedExtensionReader } from './extension-reader';
 import { HostedExtensionClient, HostedExtensionServer, hostedServicePath } from '../common/extension-protocol';
 import { HostedExtensionSupport } from './hosted-extension';
+import { HostedPluginRunner } from './hosted-plugin-runner';
 
 export default new ContainerModule(bind => {
     bind(ExtensionApiContribution).toSelf().inSingletonScope();
     bind(HostedExtensionReader).toSelf().inSingletonScope();
     bind(HostedExtensionServer).to(HostedExtensionServerImpl).inSingletonScope();
     bind(HostedExtensionSupport).toSelf().inSingletonScope();
+    bind(HostedPluginRunner).toSelf().inSingletonScope();
 
     bind(BackendApplicationContribution).toDynamicValue(ctx => ctx.container.get(ExtensionApiContribution)).inSingletonScope();
     bind(BackendApplicationContribution).toDynamicValue(ctx => ctx.container.get(HostedExtensionReader)).inSingletonScope();
