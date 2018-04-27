@@ -9,12 +9,31 @@ import { ContainerModule, interfaces, } from 'inversify';
 import { PreferenceProvider, PreferenceScope } from "@theia/core/lib/browser/preferences";
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
+import { PreferencesWidget } from "./preferences-widget";
+import { bindViewContribution, OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
+import {
+    PREFERENCES_WIDGET_ID,
+    PreferencesViewContribution
+} from "./preferences-view-contribution";
+
+import '../../src/browser/style/prefernces.css';
+
+import {PreferencesOpenHandler} from "./preferences-open-handler";
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);
 
     bind(PreferenceProvider).to(UserPreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.User);
     bind(PreferenceProvider).to(WorkspacePreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.Workspace);
+
+    bind(PreferencesOpenHandler).toSelf();
+    bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler));
+    bindViewContribution(bind, PreferencesViewContribution);
+    bind(PreferencesWidget).toSelf();
+    bind(WidgetFactory).toDynamicValue(context => ({
+        id: PREFERENCES_WIDGET_ID,
+        createWidget: () => context.container.get<PreferencesWidget>(PreferencesWidget)
+    })).inSingletonScope();
 }
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {
