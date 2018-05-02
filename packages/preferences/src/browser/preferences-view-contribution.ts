@@ -51,10 +51,14 @@ export class PreferencesViewContribution extends AbstractViewContribution<Prefer
     }
 
     registerCommands(commands: CommandRegistry): void {
-        commands.registerCommand(PreferencesCommands.OPEN_WIDGET, {execute: () => {
-                this.openerService.getOpener(new URI()).then( result => {
+        commands.registerCommand(PreferencesCommands.OPEN_WIDGET, {
+            execute: () => {
+                console.log("dsg");
+                const uri = new URI("").withScheme('file');
+                this.openerService.getOpener(uri).then(result => {
                     result.open(new URI());
                 });
-            }});
+            }
+        });
     }
 }

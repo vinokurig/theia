@@ -39,9 +39,10 @@ export class PreferencesWidget extends VirtualWidget {
     protected onActivateRequest(msg: Message): void {
         super.onActivateRequest(msg);
         const preferences: Preference[] = [];
-        for (const key of Object.keys(this.editorPreferences)) {
-            const value = this.preferenceService.get(key);
-            preferences.push({name: key, value: value});
+        for (const p in this.editorPreferences) {
+            if (p) {
+                preferences.push({name: p, value: this.preferenceService.get(p)});
+            }
         }
         this.preferencesGroups.push({
             name: "preference_name",
@@ -70,15 +71,16 @@ export class PreferencesWidget extends VirtualWidget {
 
     protected renderPreferenceGroup(group: PreferenceGroup): h.Child {
         return h.div({
-                className: "expansionToggle noselect",
-                onclick: () => {
-                    group.isExpanded = !group.isExpanded;
-                    this.update();
-                }
+                className: "expansionToggle noselect"
             },
-            h.div({className: "toggle"},
-                h.div({className: "number"}, (group.name)),
-                h.div({className: "icon fa fa-folder"})
+            h.div({className: "toggle",
+                    onclick: () => {
+                        group.isExpanded = !group.isExpanded;
+                        this.update();
+                    }
+                },
+                h.div({className: "number"}, group.name),
+                h.div({className: group.isExpanded ? "icon fa fa-caret-down" : "icon fa fa-caret-right"})
             ), group.isExpanded ? this.renderPreferencesList(group.preferences) : "");
     }
 
