@@ -9,7 +9,7 @@ import URI from '@theia/core/lib/common/uri';
 import { DisposableCollection, CommandRegistry, MenuModelRegistry } from '@theia/core';
 import { AbstractViewContribution, StatusBar, StatusBarAlignment, DiffUris } from '@theia/core/lib/browser';
 import { EditorManager, EditorWidget, EditorOpenerOptions, EditorContextMenu, EDITOR_CONTEXT_MENU } from '@theia/editor/lib/browser';
-import { GitFileChange } from '../common';
+import { GitFileChange, GitFileStatus } from '../common';
 import { GitWidget } from './git-widget';
 import { GitRepositoryTracker } from './git-repository-tracker';
 import { GitQuickOpenService } from './git-quick-open-service';
@@ -104,7 +104,20 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget> {
         this.repositoryTracker.onGitEvent(event => {
             const { status } = event;
             const branch = status.branch ? status.branch : 'NO-HEAD';
-            const dirty = status.changes.length > 0 ? '*' : '';
+            let dirty = '';
+            if (status.changes.length > 0) {
+                const conflicts = this.hasConflicts(status.changes);
+                const staged = this.allStaged(status.changes);
+                if (conflicts || staged) {
+                    if (conflicts) {
+                        dirty = '!';
+                    } else if (staged) {
+                        dirty = '+';
+                    }
+                } else {
+                    dirty = '*';
+                }
+            }
             this.statusBar.setElement(GIT_REPOSITORY_STATUS, {
                 text: `$(code-fork) ${branch}${dirty}`,
                 alignment: StatusBarAlignment.LEFT,
@@ -209,6 +222,14 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget> {
             isEnabled: () => !!this.openChangesOptions,
             isVisible: () => !!this.openChangesOptions
         });
+    }
+
+    protected hasConflicts(changes: GitFileChange[]): boolean {
+        return changes.some(c => c.status === GitFileStatus.Conflicted);
+    }
+
+    protected allStaged(changes: GitFileChange[]): boolean {
+        return !changes.some(c => !c.staged);
     }
 
     protected async openFile(): Promise<EditorWidget | undefined> {

@@ -5,11 +5,10 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { testContainer } from './test-resources/inversify.spec-config';
+import { createTaskTestContainer } from './test/task-test-container';
 import { BackendApplication } from '@theia/core/lib/node/backend-application';
 import { TaskExitedEvent, TaskInfo, TaskServer, TaskOptions, ProcessType } from '../common/task-protocol';
 import { TaskWatcher } from '../common/task-watcher';
-import * as ws from 'ws';
 import * as http from 'http';
 import * as https from 'https';
 import { isWindows } from '@theia/core/lib/common/os';
@@ -17,6 +16,7 @@ import URI from "@theia/core/lib/common/uri";
 import { FileUri } from "@theia/core/lib/node";
 import { terminalsPath } from '@theia/terminal/lib/common/terminal-protocol';
 import { expectThrowsAsync } from '@theia/core/lib/common/test/expect';
+import { TestWebSocketChannel } from '@theia/core/lib/node/messaging/test/test-web-socket-channel';
 
 /**
  * Globals
@@ -40,19 +40,28 @@ const wsRoot: string = FileUri.fsPath(new URI(__dirname).resolve('test-resources
 
 describe('Task server / back-end', function () {
     this.timeout(10000);
+
     let server: http.Server | https.Server;
-
     let taskServer: TaskServer;
-    const taskWatcher = testContainer.get(TaskWatcher);
-    let application;
+    let taskWatcher: TaskWatcher;
 
-    before(async function () {
+    beforeEach(async () => {
         process.argv.push(`--root-dir=${wsRoot}`);
 
-        application = testContainer.get(BackendApplication);
+        const testContainer = createTaskTestContainer();
+        taskWatcher = testContainer.get(TaskWatcher);
         taskServer = testContainer.get(TaskServer);
-        taskServer.setClient(taskWatcher.getTaskClient());
-        server = await application.start();
+        taskServer!.setClient(taskWatcher.getTaskClient());
+        server = await testContainer.get(BackendApplication).start();
+    });
+
+    afterEach(() => {
+        process.argv.pop();
+        taskServer = undefined!;
+        taskWatcher = undefined!;
+        const s = server;
+        server = undefined!;
+        s.close();
     });
 
     it("task running in terminal - expected data is received from the terminal ws server", async function () {
@@ -69,9 +78,11 @@ describe('Task server / back-end', function () {
         const terminalId = taskInfo.terminalId;
 
         // hook-up to terminal's ws and confirm that it outputs expected tasks' output
-        const p = new Promise((resolve, reject) => {
-            const socket = new ws(`ws://localhost:${server.address().port}${terminalsPath}/${terminalId}`);
-            socket.on('message', msg => {
+        await new Promise((resolve, reject) => {
+            const channel = new TestWebSocketChannel({ server, path: `${terminalsPath}/${terminalId}` });
+            channel.onError(reject);
+            channel.onClose((code, reason) => reject(`channel is closed with '${code}' code and '${reason}' reason`));
+            channel.onMessage(msg => {
                 // check output of task on terminal is what we expect
                 const expected = `tasking... ${someString}`;
                 if (msg.toString().indexOf(expected) !== -1) {
@@ -79,15 +90,9 @@ describe('Task server / back-end', function () {
                 } else {
                     reject(`expected sub-string not found in terminal output. Expected: "${expected}" vs Actual: "${msg.toString()}"`);
                 }
-
-                socket.close();
-            });
-            socket.on('error', error => {
-                reject(error);
+                channel.dispose();
             });
         });
-
-        await p;
     });
 
     it("task using raw process - task server success response shall not contain a terminal id", async function () {

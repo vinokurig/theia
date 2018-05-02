@@ -10,9 +10,9 @@ import { CommandContribution, MenuContribution } from '@theia/core/lib/common';
 import { KeybindingContribution, WebSocketConnectionProvider, WidgetFactory, KeybindingContext } from '@theia/core/lib/browser';
 import { TerminalFrontendContribution } from './terminal-frontend-contribution';
 import { TerminalWidget, TerminalWidgetOptions, TERMINAL_WIDGET_FACTORY_ID } from './terminal-widget';
-import { ITerminalServer, terminalPath, terminalsPath } from '../common/terminal-protocol';
+import { ITerminalServer, terminalPath } from '../common/terminal-protocol';
 import { TerminalWatcher } from '../common/terminal-watcher';
-import { IShellTerminalServer, shellTerminalPath } from '../common/shell-terminal-protocol';
+import { IShellTerminalServer, shellTerminalPath, ShellTerminalServerProxy } from '../common/shell-terminal-protocol';
 import { TerminalActiveContext } from './terminal-keybinding-contexts';
 import { createCommonBindings } from '../common/terminal-common-module';
 
@@ -33,7 +33,6 @@ export default new ContainerModule(bind => {
             child.parent = ctx.container;
             const counter = terminalNum++;
             child.bind(TerminalWidgetOptions).toConstantValue({
-                endpoint: { path: terminalsPath },
                 id: 'terminal-' + counter,
                 caption: 'Terminal ' + counter,
                 label: 'Terminal ' + counter,
@@ -55,11 +54,12 @@ export default new ContainerModule(bind => {
         return connection.createProxy<ITerminalServer>(terminalPath, terminalWatcher.getTerminalClient());
     }).inSingletonScope();
 
-    bind(IShellTerminalServer).toDynamicValue(ctx => {
+    bind(ShellTerminalServerProxy).toDynamicValue(ctx => {
         const connection = ctx.container.get(WebSocketConnectionProvider);
         const terminalWatcher = ctx.container.get(TerminalWatcher);
-        return connection.createProxy<ITerminalServer>(shellTerminalPath, terminalWatcher.getTerminalClient());
+        return connection.createProxy<IShellTerminalServer>(shellTerminalPath, terminalWatcher.getTerminalClient());
     }).inSingletonScope();
+    bind(IShellTerminalServer).toService(ShellTerminalServerProxy);
 
     createCommonBindings(bind);
 });

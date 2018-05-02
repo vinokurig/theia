@@ -1,20 +1,20 @@
 {
   "name": "@theia/monaco",
-  "version": "0.3.8",
+  "version": "0.3.10",
   "description": "Theia - Monaco Extension",
   "dependencies": {
-    "@theia/core": "^0.3.8",
-    "@theia/editor": "^0.3.8",
-    "@theia/filesystem": "^0.3.8",
-    "@theia/languages": "^0.3.8",
-    "@theia/markers": "^0.3.8",
-    "@theia/outline-view": "^0.3.8",
-    "@theia/workspace": "^0.3.8",
-    "monaco-css": "^1.3.3",
-    "monaco-html": "^1.3.2",
-    "monaco-json": "^1.3.2",
-    "monaco-languageclient": "^0.4.0",
-    "monaco-languages": "^0.9.0"
+    "@theia/core": "^0.3.10",
+    "@theia/editor": "^0.3.10",
+    "@theia/filesystem": "^0.3.10",
+    "@theia/languages": "^0.3.10",
+    "@theia/markers": "^0.3.10",
+    "@theia/outline-view": "^0.3.10",
+    "@theia/workspace": "^0.3.10",
+    "monaco-css": "^2.0.1",
+    "monaco-html": "^2.0.2",
+    "monaco-json": "^2.0.1",
+    "monaco-languageclient": "0.6.3",
+    "monaco-languages": "^1.0.4"
   },
   "publishConfig": {
     "access": "public"
@@ -50,7 +50,7 @@
     "docs": "theiaext docs"
   },
   "devDependencies": {
-    "@theia/ext-scripts": "^0.3.8"
+    "@theia/ext-scripts": "^0.3.10"
   },
   "nyc": {
     "extends": "../../configs/nyc.json"

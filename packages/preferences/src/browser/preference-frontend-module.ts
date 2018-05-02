@@ -17,8 +17,7 @@ import {
 } from "./preferences-view-contribution";
 
 import '../../src/browser/style/prefernces.css';
-
-import {PreferencesOpenHandler} from "./preferences-open-handler";
+import { PreferencesOpenHandler } from "@theia/preferences/lib/browser/preferences-open-handler";
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);

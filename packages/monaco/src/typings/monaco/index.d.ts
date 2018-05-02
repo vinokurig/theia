@@ -1,3 +1,10 @@
+/*
+ * Copyright (C) 2018 TypeFox and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 /// <reference types='monaco-editor-core/monaco'/>
 
 declare module monaco.instantiation {
@@ -10,14 +17,18 @@ declare module monaco.editor {
     export interface IDiffNavigator {
         readonly ranges: IDiffRange[];
         readonly nextIdx: number;
-        initIdx(fwd: boolean): void;
+        readonly revealFirst: boolean;
+        _initIdx(fwd: boolean): void;
     }
 
     export interface IDiffRange {
         readonly range: Range;
     }
 
-    export interface ICommonCodeEditor {
+    export interface IStandaloneCodeEditor extends CommonCodeEditor {
+    }
+
+    export interface CommonCodeEditor {
         readonly _commandService: monaco.commands.ICommandService;
         readonly _instantiationService: monaco.instantiation.IInstantiationService;
         readonly _contributions: {
@@ -62,7 +73,7 @@ declare module monaco.editor {
     }
 
     export interface IEditorReference {
-        getControl(): monaco.editor.ICommonCodeEditor;
+        getControl(): monaco.editor.CommonCodeEditor;
     }
 
     export interface IEditorInput {
@@ -499,9 +510,10 @@ declare module monaco.quickOpen {
         setHighlights(labelHighlights: IHighlight[], descriptionHighlights?: IHighlight[], detailHighlights?: IHighlight[]): void;
         getHighlights(): [IHighlight[] /* Label */, IHighlight[] /* Description */, IHighlight[] /* Detail */];
         run(mode: Mode, context: IEntryRunContext): boolean;
-        static compare(elementA: QuickOpenEntry, elementB: QuickOpenEntry, lookFor: string): number;
-        static highlight(entry: QuickOpenEntry, lookFor: string, fuzzyHighlight?: boolean): { labelHighlights: IHighlight[], descriptionHighlights: IHighlight[] };
     }
+
+    export function compareEntries(elementA: QuickOpenEntry, elementB: QuickOpenEntry, lookFor: string): number;
+
     export class QuickOpenEntryGroup extends QuickOpenEntry {
         constructor(entry?: QuickOpenEntry, groupLabel?: string, withBorder?: boolean);
         getGroupLabel(): string;
@@ -547,7 +559,7 @@ declare module monaco.filters {
     export function matchesFuzzy(word: string, wordToMatchAgainst: string, enableSeparateSubstringMatching?: boolean): IMatch[] | undefined;
 }
 
-declare module monaco.editorCommonExtensions {
+declare module monaco.editorExtensions {
 
     export interface EditorAction {
         id: string;
@@ -555,7 +567,7 @@ declare module monaco.editorCommonExtensions {
         alias: string;
     }
 
-    export module CommonEditorRegistry {
+    export module EditorExtensionsRegistry {
         export function getEditorActions(): EditorAction[];
     }
 }
@@ -621,6 +633,12 @@ declare module monaco.cancellation {
 
 declare module monaco.suggestController {
 
+    export class SuggestWidget {
+        suggestWidgetVisible: {
+            get(): boolean;
+        };
+    }
+
     export class SuggestController {
 
         getId(): string;
@@ -629,11 +647,7 @@ declare module monaco.suggestController {
         /**
          * This is a hack. The widget has a `private` visibility in the VSCode source.
          */
-        readonly _widget: {
-            suggestWidgetVisible: {
-                get(): boolean;
-            };
-        };
+        readonly _widget: SuggestWidget | undefined;
 
     }
 
