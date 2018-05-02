@@ -25,7 +25,8 @@ export namespace CommonMenus {
     export const FILE_NEW = [...FILE, '1_new'];
     export const FILE_OPEN = [...FILE, '2_open'];
     export const FILE_SAVE = [...FILE, '3_save'];
-    export const FILE_CLOSE = [...FILE, '4_close'];
+    export const FILE_AUTOSAVE = [...FILE, '4_autosave'];
+    export const FILE_CLOSE = [...FILE, '5_close'];
 
     export const EDIT = [...MAIN_MENU_BAR, '2_edit'];
     export const EDIT_UNDO = [...EDIT, '1_undo'];
@@ -124,6 +125,15 @@ export namespace CommonCommands {
         label: 'Save All'
     };
 
+    export const ENABLE_AUTO_SAVE: Command = {
+        id: 'textEditor.commands.autosave.enable',
+        label: 'Enable Auto Save'
+    };
+    export const DISABLE_AUTO_SAVE: Command = {
+        id: 'textEditor.commands.autosave.disable',
+        label: 'Disable Auto Save'
+    };
+
     export const QUIT: Command = {
         id: 'core.quit',
         label: 'Quit'
@@ -165,6 +175,13 @@ export class CommonFrontendContribution implements MenuContribution, CommandCont
         });
         registry.registerMenuAction(CommonMenus.FILE_SAVE, {
             commandId: CommonCommands.SAVE_ALL.id
+        });
+
+        registry.registerMenuAction(CommonMenus.FILE_AUTOSAVE, {
+            commandId: CommonCommands.ENABLE_AUTO_SAVE.id
+        });
+        registry.registerMenuAction(CommonMenus.FILE_AUTOSAVE, {
+            commandId: CommonCommands.DISABLE_AUTO_SAVE.id
         });
 
         registry.registerMenuAction(CommonMenus.EDIT_UNDO, {
