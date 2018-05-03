@@ -125,13 +125,9 @@ export namespace CommonCommands {
         label: 'Save All'
     };
 
-    export const ENABLE_AUTO_SAVE: Command = {
-        id: 'textEditor.commands.autosave.enable',
-        label: 'Enable Auto Save'
-    };
-    export const DISABLE_AUTO_SAVE: Command = {
-        id: 'textEditor.commands.autosave.disable',
-        label: 'Disable Auto Save'
+    export const AUTO_SAVE: Command = {
+        id: 'textEditor.commands.autosave',
+        label: 'Auto Save'
     };
 
     export const QUIT: Command = {
@@ -178,10 +174,7 @@ export class CommonFrontendContribution implements MenuContribution, CommandCont
         });
 
         registry.registerMenuAction(CommonMenus.FILE_AUTOSAVE, {
-            commandId: CommonCommands.ENABLE_AUTO_SAVE.id
-        });
-        registry.registerMenuAction(CommonMenus.FILE_AUTOSAVE, {
-            commandId: CommonCommands.DISABLE_AUTO_SAVE.id
+            commandId: CommonCommands.AUTO_SAVE.id
         });
 
         registry.registerMenuAction(CommonMenus.EDIT_UNDO, {

@@ -73,12 +73,8 @@ export class EditorCommandContribution implements CommandContribution {
         registry.registerCommand(EditorCommands.GO_FORWARD);
         registry.registerCommand(EditorCommands.GO_LAST_EDIT);
 
-        registry.registerCommand(CommonCommands.ENABLE_AUTO_SAVE, {
-            isEnabled: () => !this.isAutoSaveOn(),
-            execute: () => this.switchAutoSave()
-        });
-        registry.registerCommand(CommonCommands.DISABLE_AUTO_SAVE, {
-            isEnabled: () => this.isAutoSaveOn(),
+        registry.registerCommand(CommonCommands.AUTO_SAVE, {
+            isToggled: () => this.isAutoSaveOn(),
             execute: () => this.switchAutoSave()
         });
     }
