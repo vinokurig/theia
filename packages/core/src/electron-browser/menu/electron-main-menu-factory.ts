@@ -94,8 +94,10 @@ export class ElectronMainMenuFactory {
             const applicationMenu = electron.remote.Menu.getApplicationMenu();
             if (applicationMenu) {
                 for (const item of toggledCommands) {
-                    applicationMenu.getMenuItemById(item).checked = this.commandRegistry.isToggled(item);
-                    electron.remote.Menu.setApplicationMenu(applicationMenu);
+                    if (this.commandRegistry.isVisible(item)) {
+                        applicationMenu.getMenuItemById(item).checked = this.commandRegistry.isToggled(item);
+                        electron.remote.Menu.setApplicationMenu(applicationMenu);
+                    }
                 }
             }
         });
@@ -161,9 +163,12 @@ export class ElectronMainMenuFactory {
 
     protected execute(command: string): void {
         this.commandRegistry.executeCommand(command).catch(() => { /* no-op */ });
-        if (this.commandRegistry.getToggledHandler(command)) {
-            const menu = electron.remote.Menu;
-            menu.setApplicationMenu(menu.getApplicationMenu());
+        if (this.commandRegistry.isVisible(command)) {
+            const menu = electron.remote.Menu.getApplicationMenu();
+            if (menu) {
+                menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command);
+                electron.remote.Menu.setApplicationMenu(menu);
+            }
         }
     }
 
