@@ -11,13 +11,14 @@ import {
     CommandRegistry, isOSX, ActionMenuNode, CompositeMenuNode,
     MAIN_MENU_BAR, MenuModelRegistry, MenuPath
 } from '../../common';
-import { KeybindingRegistry, Keybinding, KeyCode, Key } from '../../browser';
+import { PreferenceService, KeybindingRegistry, Keybinding, KeyCode, Key } from '../../browser';
 
 @injectable()
 export class ElectronMainMenuFactory {
 
     constructor(
         @inject(CommandRegistry) protected readonly commandRegistry: CommandRegistry,
+        @inject(PreferenceService) protected readonly preferencesService: PreferenceService,
         @inject(MenuModelRegistry) protected readonly menuProvider: MenuModelRegistry,
         @inject(KeybindingRegistry) protected readonly keybindingRegistry: KeybindingRegistry
     ) { }
@@ -39,6 +40,7 @@ export class ElectronMainMenuFactory {
     }
 
     protected fillMenuTemplate(items: Electron.MenuItemConstructorOptions[], menuModel: CompositeMenuNode): Electron.MenuItemConstructorOptions[] {
+        const toggledCommands: string[] = [];
         for (const menu of menuModel.children) {
             if (menu instanceof CompositeMenuNode) {
                 if (menu.label) {
@@ -56,12 +58,13 @@ export class ElectronMainMenuFactory {
                     this.fillMenuTemplate(items, menu);
                 }
             } else if (menu instanceof ActionMenuNode) {
+                const commandId = menu.action.commandId;
                 // That is only a sanity check at application startup.
-                if (!this.commandRegistry.getCommand(menu.action.commandId)) {
-                    throw new Error(`Unknown command with ID: ${menu.action.commandId}.`);
+                if (!this.commandRegistry.getCommand(commandId)) {
+                    throw new Error(`Unknown command with ID: ${commandId}.`);
                 }
 
-                const bindings = this.keybindingRegistry.getKeybindingsForCommand(menu.action.commandId);
+                const bindings = this.keybindingRegistry.getKeybindingsForCommand(commandId);
 
                 let accelerator;
 
@@ -72,15 +75,30 @@ export class ElectronMainMenuFactory {
                 }
 
                 items.push({
+                    id: menu.id,
                     label: menu.label,
                     icon: menu.icon,
+                    type: this.commandRegistry.getToggledHandler(commandId) ? "checkbox" : "normal",
+                    checked: this.commandRegistry.isToggled(commandId),
                     enabled: true, // https://github.com/theia-ide/theia/issues/446
                     visible: true,
-                    click: () => this.execute(menu.action.commandId),
+                    click: () => this.execute(commandId),
                     accelerator
                 });
+                if (this.commandRegistry.getToggledHandler(commandId)) {
+                    toggledCommands.push(commandId);
+                }
             }
         }
+        this.preferencesService.onPreferenceChanged(() => {
+            const applicationMenu = electron.remote.Menu.getApplicationMenu();
+            if (applicationMenu) {
+                for (const item of toggledCommands) {
+                    applicationMenu.getMenuItemById(item).checked = this.commandRegistry.isToggled(item);
+                    electron.remote.Menu.setApplicationMenu(applicationMenu);
+                }
+            }
+        });
         return items;
     }
 
@@ -143,6 +161,10 @@ export class ElectronMainMenuFactory {
 
     protected execute(command: string): void {
         this.commandRegistry.executeCommand(command).catch(() => { /* no-op */ });
+        if (this.commandRegistry.getToggledHandler(command)) {
+            const menu = electron.remote.Menu;
+            menu.setApplicationMenu(menu.getApplicationMenu());
+        }
     }
 
     protected createOSXMenu(): Electron.MenuItemConstructorOptions {

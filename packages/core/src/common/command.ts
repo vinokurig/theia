@@ -163,8 +163,9 @@ export class CommandRegistry implements CommandService {
     /**
      * Test whether there is a toggled handler for the given command.
      */
-    isToggled(command: string, ...args: any[]): boolean {
-        return this.getToggledHandler(command, ...args) !== undefined;
+    isToggled(command: string): boolean {
+        const handler = this.getToggledHandler(command);
+        return handler && handler.isToggled ? handler.isToggled() : false;
     }
 
     /**
@@ -214,11 +215,11 @@ export class CommandRegistry implements CommandService {
     /**
      * Get a toggled handler for the given command or `undefined`.
      */
-    getToggledHandler(commandId: string, ...args: any[]): CommandHandler | undefined {
+    getToggledHandler(commandId: string): CommandHandler | undefined {
         const handlers = this._handlers[commandId];
         if (handlers) {
             for (const handler of handlers) {
-                if (handler.isToggled && handler.isToggled(...args)) {
+                if (handler.isToggled) {
                     return handler;
                 }
             }

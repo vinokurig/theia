@@ -5,11 +5,9 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { inject, injectable } from "inversify";
-import { CommandContribution, CommandRegistry, Command } from "@theia/core/lib/common";
-import { CommonCommands, PreferenceService } from "@theia/core/lib/browser";
-
-const AUTOSAVE_PREFERENCE = 'editor.autoSave';
+import {inject, injectable} from "inversify";
+import {CommandContribution, CommandRegistry, Command} from "@theia/core/lib/common";
+import {CommonCommands, PreferenceService} from "@theia/core/lib/browser";
 
 export namespace EditorCommands {
 
@@ -60,6 +58,8 @@ export namespace EditorCommands {
 @injectable()
 export class EditorCommandContribution implements CommandContribution {
 
+    public static readonly AUTOSAVE_PREFERENCE: string = "editor.autoSave";
+
     @inject(PreferenceService)
     protected readonly preferencesService: PreferenceService;
 
@@ -75,16 +75,16 @@ export class EditorCommandContribution implements CommandContribution {
 
         registry.registerCommand(CommonCommands.AUTO_SAVE, {
             isToggled: () => this.isAutoSaveOn(),
-            execute: () => this.switchAutoSave()
+            execute: () => this.toggleAutoSave()
         });
     }
 
     private isAutoSaveOn(): boolean {
-        const autoSave = this.preferencesService.get(AUTOSAVE_PREFERENCE);
+        const autoSave = this.preferencesService.get(EditorCommandContribution.AUTOSAVE_PREFERENCE);
         return autoSave === 'on' || autoSave === undefined;
     }
 
-    private async switchAutoSave(): Promise<void> {
-        this.preferencesService.set(AUTOSAVE_PREFERENCE, this.isAutoSaveOn() ? 'off' : 'on');
+    private async toggleAutoSave(): Promise<void> {
+        this.preferencesService.set(EditorCommandContribution.AUTOSAVE_PREFERENCE, this.isAutoSaveOn() ? 'off' : 'on');
     }
 }
