@@ -1,40 +1,7 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-declare module 'nsfw' {
-	interface NsfwWatcher {
-		start(): any;
-		stop(): any;
-	}
-
-	interface NsfwWatchingPromise {
-		then(): void;
-	}
-
-	interface NsfwStartWatchingPromise {
-		then(fn: (watcher: NsfwWatcher) => void): NsfwWatchingPromise;
-	}
-
-	interface NsfwEvent {
-		action: number;
-		directory: string;
-		file?: string;
-		newFile?: string;
-		oldFile?: string;
-	}
-
-	interface NsfwFunction {
-		(dir: string, eventHandler: (events: NsfwEvent[]) => void, options?: any): NsfwStartWatchingPromise;
-		actions: {
-			CREATED: number;
-			DELETED: number;
-			MODIFIED: number;
-			RENAMED: number;
-		}
-	}
-
-	var nsfw: NsfwFunction;
-	export = nsfw;
-}
+/*
+ * Copyright (C) 2018 Ericsson and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+/// <reference types="@theia/core/src/typings/nsfw/index"/>
