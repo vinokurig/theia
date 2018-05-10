@@ -16,6 +16,8 @@ import { PreferenceService, KeybindingRegistry, Keybinding, KeyCode, Key } from 
 @injectable()
 export class ElectronMainMenuFactory {
 
+    protected _menu: Electron.Menu;
+
     constructor(
         @inject(CommandRegistry) protected readonly commandRegistry: CommandRegistry,
         @inject(PreferenceService) protected readonly preferencesService: PreferenceService,
@@ -29,7 +31,9 @@ export class ElectronMainMenuFactory {
         if (isOSX) {
             template.unshift(this.createOSXMenu());
         }
-        return electron.remote.Menu.buildFromTemplate(template);
+        const menu = electron.remote.Menu.buildFromTemplate(template);
+        this._menu = menu;
+        return menu;
     }
 
     createContextMenu(menuPath: MenuPath): Electron.Menu {
@@ -91,14 +95,9 @@ export class ElectronMainMenuFactory {
             }
         }
         this.preferencesService.onPreferenceChanged(() => {
-            const applicationMenu = electron.remote.Menu.getApplicationMenu();
-            if (applicationMenu) {
-                for (const item of toggledCommands) {
-                    if (this.commandRegistry.isVisible(item)) {
-                        applicationMenu.getMenuItemById(item).checked = this.commandRegistry.isToggled(item);
-                        electron.remote.Menu.setApplicationMenu(applicationMenu);
-                    }
-                }
+            for (const item of toggledCommands) {
+                this._menu.getMenuItemById(item).checked = this.commandRegistry.isToggled(item);
+                electron.remote.getCurrentWindow().setMenu(this._menu);
             }
         });
         return items;
@@ -164,11 +163,8 @@ export class ElectronMainMenuFactory {
     protected execute(command: string): void {
         this.commandRegistry.executeCommand(command).catch(() => { /* no-op */ });
         if (this.commandRegistry.isVisible(command)) {
-            const menu = electron.remote.Menu.getApplicationMenu();
-            if (menu) {
-                menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command);
-                electron.remote.Menu.setApplicationMenu(menu);
-            }
+            this._menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command);
+            electron.remote.getCurrentWindow().setMenu(this._menu);
         }
     }
 
