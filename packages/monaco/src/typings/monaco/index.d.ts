@@ -571,6 +571,25 @@ declare module monaco.editorExtensions {
         export function getEditorActions(): EditorAction[];
     }
 }
+declare module monaco.languages.json {
+    export interface DiagnosticsOptions {
+        readonly validate?: boolean;
+        readonly allowComments?: boolean;
+        readonly schemas?: {
+            readonly uri: string;
+            readonly fileMatch?: string[];
+            readonly schema?: any;
+        }[];
+    }
+
+    export interface LanguageServiceDefaults {
+        readonly onDidChange: IEvent<LanguageServiceDefaults>;
+        readonly diagnosticsOptions: DiagnosticsOptions;
+        setDiagnosticsOptions(options: DiagnosticsOptions): void;
+    }
+
+    export var jsonDefaults: LanguageServiceDefaults;
+}
 declare module monaco.modes {
     export interface LanguageFeatureRegistry<T> {
         has(model: monaco.editor.IReadOnlyModel): boolean;

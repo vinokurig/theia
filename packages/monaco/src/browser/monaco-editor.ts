@@ -68,6 +68,33 @@ export class MonacoEditor implements TextEditor, IEditorReference {
     }
 
     protected create(options?: IEditorConstructionOptions, override?: monaco.editor.IEditorOverrideServices): Disposable {
+        monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+            schemas: [{
+                uri: "http://myserver/foo-schema.json",
+                fileMatch: [ 'preferences.json' ],
+                schema: {
+                    type: "object",
+                    properties: {
+                        p1: {
+                            enum: [ "v1", "v2"]
+                        },
+                        p2: {
+                            $ref: "http://myserver/bar-schema.json"
+                        }
+                    }
+                }
+            }, {
+                uri: "http://myserver/bar-schema.json",
+                schema: {
+                    type: "object",
+                    properties: {
+                        q1: {
+                            enum: [ "x1", "x2"]
+                        }
+                    }
+                }
+            }]
+        });
         return this.editor = monaco.editor.create(this.node, {
             ...options,
             lightbulb: { enabled: true },
