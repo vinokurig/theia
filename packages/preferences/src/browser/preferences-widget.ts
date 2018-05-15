@@ -11,6 +11,10 @@ import { Message } from "@phosphor/messaging";
 import { h } from '@phosphor/virtualdom';
 import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences";
 import {PreferenceService} from "../../../core/lib/browser/preferences/preference-service";
+import {GitPreferences} from "@theia/git/lib/browser/git-preferences";
+import {EditorManager} from "@theia/editor/lib/browser";
+import URI from "@theia/core/lib/common/uri";
+import {ApplicationShell} from "@theia/core/lib/browser";
 
 export interface PreferenceGroup {
     name: string;
@@ -24,9 +28,12 @@ export interface Preference {
 }
 
 export class PreferencesWidget extends VirtualWidget {
+    private widget1: any;
     protected preferencesGroups: PreferenceGroup[];
-
     constructor (@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
+                 @inject(GitPreferences) protected readonly gitPreferences: GitPreferences,
+                 @inject(EditorManager) protected readonly editorManager: EditorManager,
+                 @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
                  @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
         super();
         this.id = "theia-preferences-container";
@@ -34,44 +41,68 @@ export class PreferencesWidget extends VirtualWidget {
         this.title.closable = true;
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
+
+        const promise = this.editorManager.open(
+            new URI()
+                .withScheme("file")
+                .withPath("/home/ivinokur/.theia/settings.json"), {
+                mode: "activate",
+                widgetOptions: {area: "right"}
+            }
+        );
+        promise.then(widget => {
+            this.widget1 = widget;
+            this.update();
+        });
+        this.update();
+    }
+
+    protected onCloseRequest(msg: Message): void {
+        if (this.widget1) {
+            this.widget1.close();
+        }
+        this.applicationShell.collapsePanel("right");
+        super.onCloseRequest(msg);
     }
 
     protected onActivateRequest(msg: Message): void {
         super.onActivateRequest(msg);
-        const preferences: Preference[] = [];
+        const editorPreferences: Preference[] = [];
+        const gitPreferences: Preference[] = [];
         for (const p in this.editorPreferences) {
             if (p) {
-                preferences.push({name: p, value: this.preferenceService.get(p)});
+                editorPreferences.push({name: p, value: this.preferenceService.get(p)});
+            }
+        }
+        for (const p in this.gitPreferences) {
+            if (p) {
+                gitPreferences.push({name: p, value: this.preferenceService.get(p)});
             }
         }
         this.preferencesGroups.push({
-            name: "preference_name",
-            preferences: preferences,
+            name: "Editor Preferences",
+            preferences: editorPreferences,
             isExpanded: false
         });
         this.preferencesGroups.push({
-            name: "preference_name1",
-            preferences: preferences,
+            name: "Git Preferences",
+            preferences: gitPreferences,
             isExpanded: false
         });
         this.update();
     }
 
-    protected onUpdateRequest(msg: Message): void {
-        super.onUpdateRequest(msg);
-    }
-
     protected render(): h.Child {
-        const containers = [];
+        const preferenceGroups = [];
         for (const preferenceGroup of this.preferencesGroups) {
-            containers.push(this.renderPreferenceGroup(preferenceGroup));
+            preferenceGroups.push(this.renderPreferenceGroup(preferenceGroup));
         }
-        return h.div({ className: "preferences-container" }, ...containers);
+        return h.div({ className: "preferences-container" }, ...preferenceGroups);
     }
 
     protected renderPreferenceGroup(group: PreferenceGroup): h.Child {
         return h.div({
-                className: "expansionToggle noselect"
+                className: "preference-group"
             },
             h.div({className: "toggle",
                     onclick: () => {
@@ -89,18 +120,31 @@ export class PreferencesWidget extends VirtualWidget {
         for (const preference of preferences) {
             files.push(this.renderPreferenceItem(preference));
         }
-        const commitFiles = h.div({ className: "commitFileList" }, ...files);
-        return h.div({ className: "commitBody" }, commitFiles);
+        const commitFiles = h.div({ className: "preferences-list" }, ...files);
+        return h.div({ className: "preference-body" }, commitFiles);
     }
 
     protected renderPreferenceItem(preference: Preference): h.Child {
-        const nameSpan = h.span({ className: 'name' }, preference.name + ' ');
-        const valueSpan = h.span({ className: 'path' }, preference.value);
+        const nameSpan = h.span({className: 'name'}, preference.name + ' ');
+        const valueSpan = h.span({className: 'path'}, preference.value);
+        const button = h.i({
+            className: "icon fa fa-pencil",
+            title: "Edit",
+            onclick: () => {
+                this.update();
+            }
+        });
         const elements = [];
-        elements.push(h.div({
+        const buttonContainer = h.div({
+            className: 'preference-item-button'
+        }, button);
+        const buttonsContainer = h.div({
+            className: 'preference-item-buttons'
+        }, buttonContainer);
+        elements.push(buttonsContainer, nameSpan, valueSpan);
+        return h.div({
+            className: 'preference-item-container',
             title: preference.name,
-            className: 'noWrapInfo'
-        }, nameSpan, valueSpan));
-        return h.div({ className: `preferenceItem noselect${preference.name}` }, ...elements);
+        }, ...elements);
     }
 }

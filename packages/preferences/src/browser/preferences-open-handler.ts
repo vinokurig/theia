@@ -17,6 +17,6 @@ export class PreferencesOpenHandler extends WidgetOpenHandler<PreferencesWidget>
     readonly id: string = PREFERENCES_WIDGET_ID;
 
     canHandle(uri: URI): number {
-        return 500;
+        return uri.query === "preferences" ? 500 : -1;
     }
 }
