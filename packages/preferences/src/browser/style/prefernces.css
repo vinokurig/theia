@@ -31,11 +31,57 @@
     margin: 3px;
 }
 
+.preference-item-name {
+    margin-right: 5px;
+}
+
+.preference-item-value {
+    margin-right: 5px;
+}
+
+.preference-item-input {
+    width: 25px;
+    line-height: var(--theia-content-line-height);
+    font-size: var(--theia-ui-font-size1);
+    color: var(--theia-ui-font-color1);
+    background: var(--theia-layout-color2);
+    border-style: solid;
+    border-width: 1px;
+    resize: none;
+    box-sizing: border-box;
+    height: 25px;
+    padding-left: 4px;
+}
+
+.preference-item-value-list {
+    display: none;
+    position: absolute;
+    background-color: var(--theia-content-font-color1);
+    color: black;
+    z-index: 1;
+}
+
+.preference-item-value-add {
+    display: none;
+    position: absolute;
+    background-color: var(--theia-content-font-color1);
+    color: black;
+}
+
+.preference-item-value {
+    color: var(--theia-ui-font-color2);
+    font-size: var(--theia-ui-font-size0);
+    margin-left: 3px;
+}
+
 .preference-item-container {
     display: flex;
 }
 
-.preference-item-container:hover .preference-item-buttons .preference-item-button {
+.preference-item-button {
+    display: none;
+}
+.preference-item-container:hover .preference-item-button-container .preference-item-button {
     display: block;
 }
 
@@ -44,10 +90,33 @@
     cursor: pointer;
 }
 
-.preference-item-buttons {
+.preference-item-button-container {
     width: 20px;
 }
 
-.preference-item-button {
+.preference-item-button-container:focus .preference-item-button {
+    display: block;
+}
+
+.preference-item-button-container:focus .preference-item-value-list {
+    display: block;
+}
+
+.preference-item-value-list-item:focus .preference-item-value-list {
     display: none;
+}
+
+.preference-item-button-container:focus .preference-item-value-add {
+    display: block;
+    padding: 3px;
+}
+
+.preference-item-value-list-item {
+    display: block;
+    padding: 3px;
+}
+
+.preference-item-value-list-item:hover {
+    color: var(--theia-ui-font-color1);
+    background-color: var(--theia-accent-color4);;
 }

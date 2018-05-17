@@ -10,11 +10,12 @@ import { VirtualWidget } from "@theia/core/lib/browser/widgets/virtual-widget";
 import { Message } from "@phosphor/messaging";
 import { h } from '@phosphor/virtualdom';
 import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences";
-import {PreferenceService} from "../../../core/lib/browser/preferences/preference-service";
+import { PreferenceService } from "../../../core/lib/browser/preferences";
 import {GitPreferences} from "@theia/git/lib/browser/git-preferences";
 import {EditorManager} from "@theia/editor/lib/browser";
 import URI from "@theia/core/lib/common/uri";
-import {ApplicationShell} from "@theia/core/lib/browser";
+import {ApplicationShell, PreferenceSchema, PreferenceScope} from "@theia/core/lib/browser";
+import {PreferenceProperty} from "@theia/core/lib/browser/preferences/preference-contribution";
 
 export interface PreferenceGroup {
     name: string;
@@ -24,7 +25,7 @@ export interface PreferenceGroup {
 
 export interface Preference {
     name: string;
-    value: any;
+    property: PreferenceProperty;
 }
 
 export class PreferencesWidget extends VirtualWidget {
@@ -33,6 +34,7 @@ export class PreferencesWidget extends VirtualWidget {
     constructor (@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
                  @inject(GitPreferences) protected readonly gitPreferences: GitPreferences,
                  @inject(EditorManager) protected readonly editorManager: EditorManager,
+                 @inject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema,
                  @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
                  @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
         super();
@@ -69,14 +71,11 @@ export class PreferencesWidget extends VirtualWidget {
         super.onActivateRequest(msg);
         const editorPreferences: Preference[] = [];
         const gitPreferences: Preference[] = [];
-        for (const p in this.editorPreferences) {
-            if (p) {
-                editorPreferences.push({name: p, value: this.preferenceService.get(p)});
-            }
-        }
-        for (const p in this.gitPreferences) {
-            if (p) {
-                gitPreferences.push({name: p, value: this.preferenceService.get(p)});
+        const properties = this.preferenceSchema.properties;
+        for (const propertie in properties) {
+            if (propertie) {
+                const value: PreferenceProperty = properties[propertie];
+                editorPreferences.push({name: propertie, property: value});
             }
         }
         this.preferencesGroups.push({
@@ -125,26 +124,60 @@ export class PreferencesWidget extends VirtualWidget {
     }
 
     protected renderPreferenceItem(preference: Preference): h.Child {
-        const nameSpan = h.span({className: 'name'}, preference.name + ' ');
-        const valueSpan = h.span({className: 'path'}, preference.value);
-        const button = h.i({
-            className: "icon fa fa-pencil",
-            title: "Edit",
-            onclick: () => {
-                this.update();
-            }
-        });
-        const elements = [];
-        const buttonContainer = h.div({
-            className: 'preference-item-button'
-        }, button);
-        const buttonsContainer = h.div({
-            className: 'preference-item-buttons'
-        }, buttonContainer);
-        elements.push(buttonsContainer, nameSpan, valueSpan);
+        const nameSpan = h.span({className: 'preference-item-name', title: preference.property.description}, preference.name);
+        const property = preference.property;
+        const enumItems: h.Child[] = [];
+        let value;
+        if (property.type === 'boolean') {
+            enumItems.push(h.span({
+                className: 'preference-item-value-list-item', onclick: (event: MouseEvent) => {
+                    this.handleElement(preference.name, "true", event.toElement.parentElement);
+                }
+            }, 'true'));
+            enumItems.push(h.span({
+                className: 'preference-item-value-list-item', onclick: (event: MouseEvent) => {
+                    this.handleElement(preference.name, "false", event.toElement.parentElement);
+                }
+            }, 'false'));
+        } else if (property.enum) {
+            property.enum.forEach(item => {
+                enumItems.push(h.span({
+                    className: 'preference-item-value-list-item', onclick: (event: MouseEvent) => {
+                        this.handleElement(preference.name, item, event.toElement.parentElement);
+                    }
+                }, item));
+            });
+        }
+        if (enumItems.length !== 0) {
+            value = h.div({className: 'preference-item-value-list'}, ...enumItems);
+        } else {
+            value = h.span({className: 'preference-item-value-add', onclick: (event: MouseEvent) => {
+                    this.handleElement(preference.name, "some value", event.toElement.parentElement);
+                }}, 'Add value');
+        }
+        const button = h.i({className: "icon fa fa-pencil", title: "Edit"});
+        const elements: h.Child[] = [];
+        const buttonContainer = h.div(
+            {className: 'preference-item-button-container', tabindex: '0'},
+                h.div({className: 'preference-item-button'}, button, value)
+        );
+        elements.push(buttonContainer, nameSpan);
         return h.div({
             className: 'preference-item-container',
-            title: preference.name,
         }, ...elements);
+    }
+
+    protected handleElement(name: string, item: string, element: HTMLElement | null): void {
+        this.preferenceService.set(name, item, PreferenceScope.User);
+        let parent = element;
+        if (parent) {
+            parent = parent.parentElement;
+            if (parent) {
+                parent = parent.parentElement;
+                if (parent) {
+                    parent.blur();
+                }
+            }
+        }
     }
 }
