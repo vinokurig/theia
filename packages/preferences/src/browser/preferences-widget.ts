@@ -151,20 +151,49 @@ export class PreferencesWidget extends VirtualWidget {
         if (enumItems.length !== 0) {
             value = h.div({className: 'preference-item-value-list'}, ...enumItems);
         } else {
-            value = h.span({className: 'preference-item-value-add', onclick: (event: MouseEvent) => {
+            const buttonAdd = h.span({className: 'preference-item-value-add-button', onclick: (event: MouseEvent) => {
                     this.handleElement(preference.name, "some value", event.toElement.parentElement);
-                }}, 'Add value');
+                }
+            }, 'Add value');
+            const defaultValue = property.default ? property.default : "";
+            const input = h.input({className: 'preference-item-value-input', placeholder: defaultValue});
+            value = h.div({className: 'preference-item-value-add', id: preference.name + "-id", tabindex: '0'}, input, buttonAdd);
         }
-        const button = h.i({className: "icon fa fa-pencil", title: "Edit"});
         const elements: h.Child[] = [];
-        const buttonContainer = h.div(
-            {className: 'preference-item-button-container', tabindex: '0'},
-                h.div({className: 'preference-item-button'}, button, value)
-        );
-        elements.push(buttonContainer, nameSpan);
-        return h.div({
-            className: 'preference-item-container',
-        }, ...elements);
+        let previousContainer: HTMLElement;
+        const editDiv = h.div({className: "preference-item-pencil-div"},
+            h.div({
+                className: 'preference-item-pencil-container',
+                tabindex: '0',
+                id: "pencil-container",
+                onclick: () => {
+                    if (previousContainer) {
+                        previousContainer.style.display = "none";
+                    }
+                    const container = document.getElementById(preference.name + "-id");
+                    if (container) {
+                        previousContainer = container;
+                        container.style.display = "block";
+                    }
+                }
+            }, h.i({className: "icon fa fa-pencil", title: "Edit"})), value);
+        // const editContainer = h.div({
+        //         className: 'preference-item-value-add-container',
+        //         tabindex: '0',
+        //         id: "preference-item-value-add-container",
+        //         onclick: () => {
+        //             if (previousContainer) {
+        //                 previousContainer.style.display = "none";
+        //             }
+        //             const container = document.getElementById(preference.name + "-id");
+        //             if (container) {
+        //                 previousContainer = container;
+        //                 container.style.display = "block";
+        //             }
+        //         }
+        //     }, value);
+        elements.push(editDiv, nameSpan);
+        return h.div({className: 'preference-item-container'}, ...elements);
     }
 
     protected handleElement(name: string, item: string, element: HTMLElement | null): void {
