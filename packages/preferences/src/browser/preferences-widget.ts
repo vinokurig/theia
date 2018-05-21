@@ -59,8 +59,7 @@ export class PreferencesWidget extends VirtualWidget {
         this.update();
     }
 
-    protected oldIconId: string;
-    protected oldValueContainerId: string;
+    protected oldPrefernceName: string;
 
     protected onCloseRequest(msg: Message): void {
         if (this.widget1) {
@@ -154,13 +153,24 @@ export class PreferencesWidget extends VirtualWidget {
         if (enumItems.length !== 0) {
             value = h.div({className: 'preference-item-value-list'}, ...enumItems);
         } else {
-            const buttonAdd = h.span({className: 'preference-item-value-input-button', onclick: (event: MouseEvent) => {
-                    this.handleElement(preference.name, "some value");
-                }
-            }, 'Add value');
             const defaultValue = property.default ? property.default : "";
-            const input = h.input({className: 'preference-item-value-input-input', placeholder: defaultValue});
-            value = h.div({className: 'preference-item-value-input-div', id: 'value-input-id-' + preference.name, tabindex: '0'}, input, buttonAdd);
+            const input = h.input({
+                className: 'preference-item-value-input-input',
+                placeholder: defaultValue,
+                id: 'value-input-' + preference.name
+            });
+            const buttonAdd = h.button({
+                className: 'preference-item-value-input-button', onclick: () => {
+                    const inputValue: any = document.getElementById('value-input-' + preference.name);
+                    if (inputValue) {
+                        const value: string = inputValue.value;
+                        this.handleElement(preference.name, value.length === 0 ? defaultValue : value);
+                    }
+                }
+            }, 'Edit');
+            value = h.div({
+                className: 'preference-item-value-input-div',
+                id: 'value-input-id-' + preference.name, tabindex: '0'}, input, buttonAdd);
         }
         const elements: h.Child[] = [];
         const editDiv = h.div({className: "preference-item-pencil-div"},
@@ -169,22 +179,10 @@ export class PreferencesWidget extends VirtualWidget {
                 id: 'pencil-icon-container-' + preference.name,
                 tabindex: '0',
                 onclick: () => {
-                    if (this.oldIconId) {
-                        const oldIconDiv = document.getElementById(this.oldIconId);
-                        if (oldIconDiv) {
-                            oldIconDiv.style.display = 'none';
-                            oldIconDiv.removeAttribute('style');
-                        }
+                    if (this.oldPrefernceName) {
+                        this.hideValue(this.oldPrefernceName);
                     }
-                    if (this.oldValueContainerId) {
-                        const oldValueContainerDiv = document.getElementById(this.oldValueContainerId);
-                        if (oldValueContainerDiv) {
-                            oldValueContainerDiv.style.display = 'none';
-                            oldValueContainerDiv.removeAttribute('style');
-                        }
-                    }
-                    this.oldIconId = 'pencil-icon-container-' + preference.name;
-                    this.oldValueContainerId = 'value-container-' + preference.name;
+                    this.oldPrefernceName = preference.name;
                     const valueDiv = document.getElementById('value-container-' + preference.name);
                     if (valueDiv) {
                         valueDiv.style.display = "block";
@@ -204,6 +202,10 @@ export class PreferencesWidget extends VirtualWidget {
 
     protected handleElement(preferenceName: string, value: string): void {
         this.preferenceService.set(preferenceName, value, PreferenceScope.User);
+        this.hideValue(preferenceName);
+    }
+
+    protected hideValue(preferenceName: string): void {
         const valueDiv = document.getElementById('value-container-' + preferenceName);
         if (valueDiv) {
             valueDiv.style.display = 'none';
@@ -213,9 +215,5 @@ export class PreferencesWidget extends VirtualWidget {
             iconDiv.style.display = "none";
             iconDiv.removeAttribute('style');
         }
-    }
-
-    protected hideValue(id: string): void {
-
     }
 }

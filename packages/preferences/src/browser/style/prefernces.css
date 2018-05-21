@@ -91,6 +91,14 @@
     width: 20px;
 }
 
+.preference-item-pencil-div:focus {
+    border-style: none;
+}
+
+.preference-item-pencil-icon-container:focus {
+    border-style: none;
+}
+
 .preference-item-pencil-icon-container {
     display: none;
 }
@@ -111,4 +119,6 @@
 
 .preference-item-value-input-input {
     width: 150px;
+    margin-top: 1px;
+    margin-left: 1px;
 }
