@@ -9,6 +9,9 @@ import { ContainerModule, interfaces, } from 'inversify';
 import { PreferenceProvider, PreferenceScope } from "@theia/core/lib/browser/preferences";
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
+import { PreferenceFrontendContribution } from './preference-frontend-contribution';
+import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
+
 import { PreferencesOpenHandler } from "./preferences-open-handler";
 import { PreferencesWidget } from "./preferences-widget";
 import { bindViewContribution, OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
@@ -24,6 +27,10 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
 
     bind(PreferenceProvider).to(UserPreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.User);
     bind(PreferenceProvider).to(WorkspacePreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.Workspace);
+
+    bind(PreferenceFrontendContribution).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(PreferenceFrontendContribution);
+    bind(MenuContribution).toService(PreferenceFrontendContribution);
 
     bind(PreferencesOpenHandler).toSelf();
     bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler));
