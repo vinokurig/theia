@@ -53,17 +53,19 @@
     padding-left: 4px;
 }
 
-.preference-item-value-list {
+.preference-item-value-div {
     display: none;
+}
+
+.preference-item-value-list {
     position: absolute;
     background-color: var(--theia-content-font-color1);
     color: black;
     z-index: 1;
 }
 
-.preference-item-value-add {
+.preference-item-value-input-div {
     padding: 3px;
-    display: none;
     position: absolute;
     background-color: var(--theia-content-font-color1);
     color: black;
@@ -80,17 +82,6 @@
     display: flex;
 }
 
-.preference-item-value-add-container {
-    display: none;
-}
-
-
-
-/*.preference-item-container:hover .preference-item-pencil-div .preference-item-button {*/
-/*display: block;*/
-/*}*/
-
-
 .preference-item-container:hover {
     background-color: var(--theia-layout-color2);
     cursor: pointer;
@@ -100,25 +91,13 @@
     width: 20px;
 }
 
-.preference-item-pencil-container {
+.preference-item-pencil-icon-container {
     display: none;
 }
 
-.preference-item-container:hover .preference-item-pencil-container {
+.preference-item-container:hover .preference-item-pencil-icon-container {
     display: block;
 }
-
-.preference-item-pencil-div:focus .preference-item-value-add-container {
-    display: block;
-}
-
-.preference-item-pencil-div:focus .preference-item-value-list {
-    display: block;
-}
-
-/*.preference-item-pencil-div:focus .preference-item-value-add {*/
-    /*display: block;*/
-/*}*/
 
 .preference-item-value-list-item {
     display: block;
@@ -130,6 +109,6 @@
     background-color: var(--theia-accent-color4);
 }
 
-.preference-item-value-add-input {
+.preference-item-value-input-input {
     width: 150px;
 }

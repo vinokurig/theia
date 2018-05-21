@@ -59,6 +59,9 @@ export class PreferencesWidget extends VirtualWidget {
         this.update();
     }
 
+    protected oldIconId: string;
+    protected oldValueContainerId: string;
+
     protected onCloseRequest(msg: Message): void {
         if (this.widget1) {
             this.widget1.close();
@@ -130,20 +133,20 @@ export class PreferencesWidget extends VirtualWidget {
         let value;
         if (property.type === 'boolean') {
             enumItems.push(h.span({
-                className: 'preference-item-value-list-item', onclick: (event: MouseEvent) => {
-                    this.handleElement(preference.name, "true", event.toElement.parentElement);
+                className: 'preference-item-value-list-item', onclick: () => {
+                    this.handleElement(preference.name, "true");
                 }
             }, 'true'));
             enumItems.push(h.span({
-                className: 'preference-item-value-list-item', onclick: (event: MouseEvent) => {
-                    this.handleElement(preference.name, "false", event.toElement.parentElement);
+                className: 'preference-item-value-list-item', onclick: () => {
+                    this.handleElement(preference.name, "false");
                 }
             }, 'false'));
         } else if (property.enum) {
             property.enum.forEach(item => {
                 enumItems.push(h.span({
-                    className: 'preference-item-value-list-item', onclick: (event: MouseEvent) => {
-                        this.handleElement(preference.name, item, event.toElement.parentElement);
+                    className: 'preference-item-value-list-item', onclick: () => {
+                        this.handleElement(preference.name, item);
                     }
                 }, item));
             });
@@ -151,62 +154,68 @@ export class PreferencesWidget extends VirtualWidget {
         if (enumItems.length !== 0) {
             value = h.div({className: 'preference-item-value-list'}, ...enumItems);
         } else {
-            const buttonAdd = h.span({className: 'preference-item-value-add-button', onclick: (event: MouseEvent) => {
-                    this.handleElement(preference.name, "some value", event.toElement.parentElement);
+            const buttonAdd = h.span({className: 'preference-item-value-input-button', onclick: (event: MouseEvent) => {
+                    this.handleElement(preference.name, "some value");
                 }
             }, 'Add value');
             const defaultValue = property.default ? property.default : "";
-            const input = h.input({className: 'preference-item-value-input', placeholder: defaultValue});
-            value = h.div({className: 'preference-item-value-add', id: preference.name + "-id", tabindex: '0'}, input, buttonAdd);
+            const input = h.input({className: 'preference-item-value-input-input', placeholder: defaultValue});
+            value = h.div({className: 'preference-item-value-input-div', id: 'value-input-id-' + preference.name, tabindex: '0'}, input, buttonAdd);
         }
         const elements: h.Child[] = [];
-        let previousContainer: HTMLElement;
         const editDiv = h.div({className: "preference-item-pencil-div"},
             h.div({
-                className: 'preference-item-pencil-container',
+                className: 'preference-item-pencil-icon-container',
+                id: 'pencil-icon-container-' + preference.name,
                 tabindex: '0',
-                id: "pencil-container",
                 onclick: () => {
-                    if (previousContainer) {
-                        previousContainer.style.display = "none";
+                    if (this.oldIconId) {
+                        const oldIconDiv = document.getElementById(this.oldIconId);
+                        if (oldIconDiv) {
+                            oldIconDiv.style.display = 'none';
+                            oldIconDiv.removeAttribute('style');
+                        }
                     }
-                    const container = document.getElementById(preference.name + "-id");
-                    if (container) {
-                        previousContainer = container;
-                        container.style.display = "block";
+                    if (this.oldValueContainerId) {
+                        const oldValueContainerDiv = document.getElementById(this.oldValueContainerId);
+                        if (oldValueContainerDiv) {
+                            oldValueContainerDiv.style.display = 'none';
+                            oldValueContainerDiv.removeAttribute('style');
+                        }
+                    }
+                    this.oldIconId = 'pencil-icon-container-' + preference.name;
+                    this.oldValueContainerId = 'value-container-' + preference.name;
+                    const valueDiv = document.getElementById('value-container-' + preference.name);
+                    if (valueDiv) {
+                        valueDiv.style.display = "block";
+                    }
+                    const iconDiv = document.getElementById('pencil-icon-container-' + preference.name);
+                    if (iconDiv) {
+                        iconDiv.style.display = "block";
                     }
                 }
-            }, h.i({className: "icon fa fa-pencil", title: "Edit"})), value);
-        // const editContainer = h.div({
-        //         className: 'preference-item-value-add-container',
-        //         tabindex: '0',
-        //         id: "preference-item-value-add-container",
-        //         onclick: () => {
-        //             if (previousContainer) {
-        //                 previousContainer.style.display = "none";
-        //             }
-        //             const container = document.getElementById(preference.name + "-id");
-        //             if (container) {
-        //                 previousContainer = container;
-        //                 container.style.display = "block";
-        //             }
-        //         }
-        //     }, value);
+            }, h.i({className: "icon fa fa-pencil", title: "Edit"})), h.div({
+                className: 'preference-item-value-div',
+                id: 'value-container-' + preference.name
+            }, value));
         elements.push(editDiv, nameSpan);
         return h.div({className: 'preference-item-container'}, ...elements);
     }
 
-    protected handleElement(name: string, item: string, element: HTMLElement | null): void {
-        this.preferenceService.set(name, item, PreferenceScope.User);
-        let parent = element;
-        if (parent) {
-            parent = parent.parentElement;
-            if (parent) {
-                parent = parent.parentElement;
-                if (parent) {
-                    parent.blur();
-                }
-            }
+    protected handleElement(preferenceName: string, value: string): void {
+        this.preferenceService.set(preferenceName, value, PreferenceScope.User);
+        const valueDiv = document.getElementById('value-container-' + preferenceName);
+        if (valueDiv) {
+            valueDiv.style.display = 'none';
         }
+        const iconDiv = document.getElementById('pencil-icon-container-' + preferenceName);
+        if (iconDiv) {
+            iconDiv.style.display = "none";
+            iconDiv.removeAttribute('style');
+        }
+    }
+
+    protected hideValue(id: string): void {
+
     }
 }
