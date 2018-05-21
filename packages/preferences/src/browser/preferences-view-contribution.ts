@@ -10,7 +10,6 @@ import {PreferencesWidget} from "./preferences-widget";
 import {inject} from "inversify";
 import {Command, CommandRegistry, MessageService, SelectionService} from "@theia/core";
 import {FileSystem} from "@theia/filesystem/lib/common";
-import URI from "@theia/core/lib/common/uri";
 
 export const PREFERENCES_WIDGET_ID = 'preferences_widget';
 
@@ -53,10 +52,7 @@ export class PreferencesViewContribution extends AbstractViewContribution<Prefer
     registerCommands(commands: CommandRegistry): void {
         commands.registerCommand(PreferencesCommands.OPEN_WIDGET, {
             execute: () => {
-                const uri = new URI().withScheme('file').withQuery("preferences");
-                this.openerService.getOpener(uri).then(result => {
-                    result.open(new URI());
-                });
+                this.showWidget();
             }
         });
     }

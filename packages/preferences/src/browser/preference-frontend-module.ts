@@ -12,9 +12,8 @@ import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { PreferenceFrontendContribution } from './preference-frontend-contribution';
 import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
 
-import { PreferencesOpenHandler } from "./preferences-open-handler";
 import { PreferencesWidget } from "./preferences-widget";
-import { bindViewContribution, OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
+import { bindViewContribution, WidgetFactory } from "@theia/core/lib/browser";
 import {
     PREFERENCES_WIDGET_ID,
     PreferencesViewContribution
@@ -32,8 +31,6 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(CommandContribution).toService(PreferenceFrontendContribution);
     bind(MenuContribution).toService(PreferenceFrontendContribution);
 
-    bind(PreferencesOpenHandler).toSelf();
-    bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler));
     bindViewContribution(bind, PreferencesViewContribution);
     bind(PreferencesWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({

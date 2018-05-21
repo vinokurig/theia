@@ -16,6 +16,7 @@ import {EditorManager} from "@theia/editor/lib/browser";
 import URI from "@theia/core/lib/common/uri";
 import {ApplicationShell, PreferenceSchema, PreferenceScope} from "@theia/core/lib/browser";
 import {PreferenceProperty} from "@theia/core/lib/browser/preferences/preference-contribution";
+import {Widget} from "@phosphor/widgets";
 
 export interface PreferenceGroup {
     name: string;
@@ -29,7 +30,7 @@ export interface Preference {
 }
 
 export class PreferencesWidget extends VirtualWidget {
-    private widget1: any;
+    protected editorWidget: Widget;
     protected preferencesGroups: PreferenceGroup[];
     constructor (@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
                  @inject(GitPreferences) protected readonly gitPreferences: GitPreferences,
@@ -53,44 +54,46 @@ export class PreferencesWidget extends VirtualWidget {
             }
         );
         promise.then(widget => {
-            this.widget1 = widget;
+            this.editorWidget = widget;
             this.update();
         });
+
+        const editorPreferencesArray: Preference[] = [];
+        const gitPreferencesArray: Preference[] = [];
+        const properties = this.preferenceSchema.properties;
+        for (const propertie in properties) {
+            if (propertie) {
+                const value: PreferenceProperty = properties[propertie];
+                editorPreferencesArray.push({name: propertie, property: value});
+            }
+        }
+        this.preferencesGroups.push({
+            name: "Editor Preferences",
+            preferences: editorPreferencesArray,
+            isExpanded: false
+        });
+        this.preferencesGroups.push({
+            name: "Git Preferences",
+            preferences: gitPreferencesArray,
+            isExpanded: false
+        });
+        this.update();
+    }
+
+    protected onActivateRequest(msg: Message): void {
+        super.onActivateRequest(msg);
+        this.node.focus();
         this.update();
     }
 
     protected oldPrefernceName: string;
 
     protected onCloseRequest(msg: Message): void {
-        if (this.widget1) {
-            this.widget1.close();
+        if (this.editorWidget) {
+            this.editorWidget.close();
         }
         this.applicationShell.collapsePanel("right");
         super.onCloseRequest(msg);
-    }
-
-    protected onActivateRequest(msg: Message): void {
-        super.onActivateRequest(msg);
-        const editorPreferences: Preference[] = [];
-        const gitPreferences: Preference[] = [];
-        const properties = this.preferenceSchema.properties;
-        for (const propertie in properties) {
-            if (propertie) {
-                const value: PreferenceProperty = properties[propertie];
-                editorPreferences.push({name: propertie, property: value});
-            }
-        }
-        this.preferencesGroups.push({
-            name: "Editor Preferences",
-            preferences: editorPreferences,
-            isExpanded: false
-        });
-        this.preferencesGroups.push({
-            name: "Git Preferences",
-            preferences: gitPreferences,
-            isExpanded: false
-        });
-        this.update();
     }
 
     protected render(): h.Child {
