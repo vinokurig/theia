@@ -65,6 +65,7 @@
 }
 
 .preference-item-value-input-div {
+    cursor: auto;
     padding: 3px;
     position: absolute;
     background-color: var(--theia-content-font-color1);
@@ -109,16 +110,17 @@
 
 .preference-item-value-list-item {
     display: block;
-    padding: 3px;
+    padding: 5px;
 }
 
 .preference-item-value-list-item:hover {
     color: var(--theia-ui-font-color1);
-    background-color: var(--theia-accent-color4);
+    background-color: var(--theia-accent-color2);
 }
 
 .preference-item-value-input-input {
     width: 150px;
     margin-top: 1px;
+    margin-bottom: 1px;
     margin-left: 1px;
 }

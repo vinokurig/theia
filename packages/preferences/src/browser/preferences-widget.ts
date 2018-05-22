@@ -45,18 +45,19 @@ export class PreferencesWidget extends VirtualWidget {
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
 
-        const promise = this.editorManager.open(
+        this.editorManager.open(
             new URI()
                 .withScheme("file")
                 .withPath("/home/ivinokur/.theia/settings.json"), {
                 mode: "activate",
                 widgetOptions: {area: "right"}
             }
-        );
-        promise.then(widget => {
+        ).then(widget => {
             this.editorWidget = widget;
-            this.update();
         });
+
+        this.node.focus();
+        this.update();
 
         const editorPreferencesArray: Preference[] = [];
         const gitPreferencesArray: Preference[] = [];
@@ -86,13 +87,13 @@ export class PreferencesWidget extends VirtualWidget {
         this.update();
     }
 
-    protected oldPrefernceName: string;
+    protected oldPreferenceName: string;
 
     protected onCloseRequest(msg: Message): void {
         if (this.editorWidget) {
             this.editorWidget.close();
+            this.applicationShell.collapsePanel("right");
         }
-        this.applicationShell.collapsePanel("right");
         super.onCloseRequest(msg);
     }
 
@@ -129,76 +130,83 @@ export class PreferencesWidget extends VirtualWidget {
     }
 
     protected renderPreferenceItem(preference: Preference): h.Child {
-        const nameSpan = h.span({className: 'preference-item-name', title: preference.property.description}, preference.name);
+        const preferenceName: string = preference.name;
+        const nameSpan = h.span({className: 'preference-item-name', title: preference.property.description}, preferenceName);
         const property = preference.property;
         const enumItems: h.Child[] = [];
-        let value;
+        let valueDiv;
         if (property.type === 'boolean') {
             enumItems.push(h.span({
                 className: 'preference-item-value-list-item', onclick: () => {
-                    this.handleElement(preference.name, "true");
+                    this.handleElement(preferenceName, "true");
                 }
             }, 'true'));
             enumItems.push(h.span({
                 className: 'preference-item-value-list-item', onclick: () => {
-                    this.handleElement(preference.name, "false");
+                    this.handleElement(preferenceName, "false");
                 }
             }, 'false'));
         } else if (property.enum) {
             property.enum.forEach(item => {
                 enumItems.push(h.span({
                     className: 'preference-item-value-list-item', onclick: () => {
-                        this.handleElement(preference.name, item);
+                        this.handleElement(preferenceName, item);
                     }
                 }, item));
             });
         }
         if (enumItems.length !== 0) {
-            value = h.div({className: 'preference-item-value-list'}, ...enumItems);
+            valueDiv = h.div({className: 'preference-item-value-list'}, ...enumItems);
         } else {
             const defaultValue = property.default ? property.default : "";
-            const input = h.input({
+            const inputElement = h.input({
                 className: 'preference-item-value-input-input',
                 placeholder: defaultValue,
-                id: 'value-input-' + preference.name
+                id: 'value-input-' + preferenceName
             });
             const buttonAdd = h.button({
-                className: 'preference-item-value-input-button', onclick: () => {
-                    const inputValue: any = document.getElementById('value-input-' + preference.name);
+                className: 'preference-item-value-input-button',
+                id: preferenceName + '-value-input-button',
+                onclick: () => {
+                    const inputValue: any = document.getElementById('value-input-' + preferenceName);
                     if (inputValue) {
                         const value: string = inputValue.value;
-                        this.handleElement(preference.name, value.length === 0 ? defaultValue : value);
+                        this.handleElement(preferenceName, value.length === 0 ? defaultValue : value);
                     }
                 }
-            }, 'Edit');
-            value = h.div({
+            });
+            valueDiv = h.div({
                 className: 'preference-item-value-input-div',
-                id: 'value-input-id-' + preference.name, tabindex: '0'}, input, buttonAdd);
+                id: 'value-input-id-' + preferenceName, tabindex: '0'}, inputElement, buttonAdd);
         }
         const elements: h.Child[] = [];
         const editDiv = h.div({className: "preference-item-pencil-div"},
             h.div({
                 className: 'preference-item-pencil-icon-container',
-                id: 'pencil-icon-container-' + preference.name,
+                id: 'pencil-icon-container-' + preferenceName,
                 tabindex: '0',
                 onclick: () => {
-                    if (this.oldPrefernceName) {
-                        this.hideValue(this.oldPrefernceName);
+                    if (this.oldPreferenceName) {
+                        this.hideValue(this.oldPreferenceName);
                     }
-                    this.oldPrefernceName = preference.name;
-                    const valueDiv = document.getElementById('value-container-' + preference.name);
+                    this.oldPreferenceName = preferenceName;
+                    const button = document.getElementById(preferenceName + '-value-input-button');
+                    if (button) {
+                        button.innerHTML = this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value';
+                    }
+                    const valueDiv = document.getElementById('value-container-' + preferenceName);
                     if (valueDiv) {
                         valueDiv.style.display = "block";
                     }
-                    const iconDiv = document.getElementById('pencil-icon-container-' + preference.name);
+                    const iconDiv = document.getElementById('pencil-icon-container-' + preferenceName);
                     if (iconDiv) {
                         iconDiv.style.display = "block";
                     }
                 }
             }, h.i({className: "icon fa fa-pencil", title: "Edit"})), h.div({
                 className: 'preference-item-value-div',
-                id: 'value-container-' + preference.name
-            }, value));
+                id: 'value-container-' + preferenceName
+            }, valueDiv));
         elements.push(editDiv, nameSpan);
         return h.div({className: 'preference-item-container'}, ...elements);
     }
@@ -208,7 +216,7 @@ export class PreferencesWidget extends VirtualWidget {
         this.hideValue(preferenceName);
     }
 
-    protected hideValue(preferenceName: string): void {
+    private hideValue(preferenceName: string): void {
         const valueDiv = document.getElementById('value-container-' + preferenceName);
         if (valueDiv) {
             valueDiv.style.display = 'none';
