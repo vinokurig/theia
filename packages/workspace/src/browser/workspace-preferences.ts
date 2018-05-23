@@ -15,6 +15,7 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const workspacePreferenceSchema: PreferenceSchema = {
+    "name": "Workspace Preferences",
     "type": "object",
     "properties": {
         "workspace.preserveWindow": {
@@ -44,5 +45,6 @@ export function bindWorkspacePreferences(bind: interfaces.Bind): void {
         return createWorkspacePreferences(preferences);
     }).inSingletonScope();
 
+    bind(PreferenceSchema).toConstantValue(workspacePreferenceSchema);
     bind(PreferenceContribution).toConstantValue({ schema: workspacePreferenceSchema });
 }

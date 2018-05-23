@@ -15,6 +15,7 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const filesystemPreferenceSchema: PreferenceSchema = {
+    "name": "File System Preferences",
     "type": "object",
     "properties": {
         "files.watcherExclude": {
@@ -48,5 +49,6 @@ export function bindFileSystemPreferences(bind: interfaces.Bind): void {
         return createFileSystemPreferences(preferences);
     }).inSingletonScope();
 
+    bind(PreferenceSchema).toConstantValue(filesystemPreferenceSchema);
     bind(PreferenceContribution).toConstantValue({ schema: filesystemPreferenceSchema });
 }

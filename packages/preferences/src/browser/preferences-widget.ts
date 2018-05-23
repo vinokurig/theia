@@ -5,7 +5,7 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { inject } from "inversify";
+import {inject, multiInject} from "inversify";
 import { VirtualWidget } from "@theia/core/lib/browser/widgets/virtual-widget";
 import { Message } from "@phosphor/messaging";
 import { h } from '@phosphor/virtualdom';
@@ -13,10 +13,8 @@ import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences"
 import { PreferenceService } from "../../../core/lib/browser/preferences";
 import {GitPreferences} from "@theia/git/lib/browser/git-preferences";
 import {EditorManager} from "@theia/editor/lib/browser";
-import URI from "@theia/core/lib/common/uri";
 import {ApplicationShell, PreferenceSchema, PreferenceScope} from "@theia/core/lib/browser";
 import {PreferenceProperty} from "@theia/core/lib/browser/preferences/preference-contribution";
-import {Widget} from "@phosphor/widgets";
 
 export interface PreferenceGroup {
     name: string;
@@ -30,12 +28,15 @@ export interface Preference {
 }
 
 export class PreferencesWidget extends VirtualWidget {
-    protected editorWidget: Widget;
+
+    scope: PreferenceScope;
     protected preferencesGroups: PreferenceGroup[];
+    protected oldPreferenceName: string;
+
     constructor (@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
                  @inject(GitPreferences) protected readonly gitPreferences: GitPreferences,
                  @inject(EditorManager) protected readonly editorManager: EditorManager,
-                 @inject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema,
+                 @multiInject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema[],
                  @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
                  @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
         super();
@@ -45,39 +46,21 @@ export class PreferencesWidget extends VirtualWidget {
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
 
-        this.editorManager.open(
-            new URI()
-                .withScheme("file")
-                .withPath("/home/ivinokur/.theia/settings.json"), {
-                mode: "activate",
-                widgetOptions: {area: "right"}
+        for (const group of this.preferenceSchema) {
+            const properties = group.properties;
+            const preferencesArray: Preference[] = [];
+            for (const property in properties) {
+                if (property) {
+                    const value: PreferenceProperty = properties[property];
+                    preferencesArray.push({name: property, property: value});
+                }
             }
-        ).then(widget => {
-            this.editorWidget = widget;
-        });
-
-        this.node.focus();
-        this.update();
-
-        const editorPreferencesArray: Preference[] = [];
-        const gitPreferencesArray: Preference[] = [];
-        const properties = this.preferenceSchema.properties;
-        for (const propertie in properties) {
-            if (propertie) {
-                const value: PreferenceProperty = properties[propertie];
-                editorPreferencesArray.push({name: propertie, property: value});
-            }
+            this.preferencesGroups.push({
+                name: group.name,
+                preferences: preferencesArray,
+                isExpanded: false
+            });
         }
-        this.preferencesGroups.push({
-            name: "Editor Preferences",
-            preferences: editorPreferencesArray,
-            isExpanded: false
-        });
-        this.preferencesGroups.push({
-            name: "Git Preferences",
-            preferences: gitPreferencesArray,
-            isExpanded: false
-        });
         this.update();
     }
 
@@ -87,13 +70,14 @@ export class PreferencesWidget extends VirtualWidget {
         this.update();
     }
 
-    protected oldPreferenceName: string;
-
     protected onCloseRequest(msg: Message): void {
-        if (this.editorWidget) {
-            this.editorWidget.close();
-            this.applicationShell.collapsePanel("right");
-        }
+        this.applicationShell
+            .getWidgets("right")
+            .forEach(widget => {
+                if (widget.id === 'code-editor-opener:user_storage:settings.json') {
+                    widget.close();
+                }
+            });
         super.onCloseRequest(msg);
     }
 
@@ -134,7 +118,7 @@ export class PreferencesWidget extends VirtualWidget {
         const nameSpan = h.span({className: 'preference-item-name', title: preference.property.description}, preferenceName);
         const property = preference.property;
         const enumItems: h.Child[] = [];
-        let valueDiv;
+        let valueContainer;
         if (property.type === 'boolean') {
             enumItems.push(h.span({
                 className: 'preference-item-value-list-item', onclick: () => {
@@ -156,12 +140,13 @@ export class PreferencesWidget extends VirtualWidget {
             });
         }
         if (enumItems.length !== 0) {
-            valueDiv = h.div({className: 'preference-item-value-list'}, ...enumItems);
+            valueContainer = h.div({className: 'preference-item-value-list'}, ...enumItems);
         } else {
             const defaultValue = property.default ? property.default : "";
             const inputElement = h.input({
                 className: 'preference-item-value-input-input',
                 placeholder: defaultValue,
+                type: property.type ? property.type.toString() : "string",
                 id: 'value-input-' + preferenceName
             });
             const buttonAdd = h.button({
@@ -175,7 +160,7 @@ export class PreferencesWidget extends VirtualWidget {
                     }
                 }
             });
-            valueDiv = h.div({
+            valueContainer = h.div({
                 className: 'preference-item-value-input-div',
                 id: 'value-input-id-' + preferenceName, tabindex: '0'}, inputElement, buttonAdd);
         }
@@ -206,13 +191,13 @@ export class PreferencesWidget extends VirtualWidget {
             }, h.i({className: "icon fa fa-pencil", title: "Edit"})), h.div({
                 className: 'preference-item-value-div',
                 id: 'value-container-' + preferenceName
-            }, valueDiv));
+            }, valueContainer));
         elements.push(editDiv, nameSpan);
         return h.div({className: 'preference-item-container'}, ...elements);
     }
 
     protected handleElement(preferenceName: string, value: string): void {
-        this.preferenceService.set(preferenceName, value, PreferenceScope.User);
+        this.preferenceService.set(preferenceName, value, this.scope);
         this.hideValue(preferenceName);
     }
 
