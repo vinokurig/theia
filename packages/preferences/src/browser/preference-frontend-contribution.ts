@@ -21,6 +21,7 @@ import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { FileSystem } from "@theia/filesystem/lib/common";
 import { UserStorageService } from "@theia/userstorage/lib/browser";
 import { PreferencesWidget } from "./preferences-widget";
+import URI from "@theia/core/lib/common/uri";
 
 export namespace PreferenceCommands {
     export const OPEN_USER_PREFERENCES: Command = {
@@ -78,15 +79,6 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         });
     }
 
-    async showWidget(): Promise<PreferencesWidget> {
-        const widget = await this.widget;
-        widget.scope = PreferenceScope.User;
-        await widget.update();
-        return this.openView({
-            activate: true
-        });
-    }
-
     protected async openUserPreferences(): Promise<void> {
         const userUri = this.userPreferenceProvider.getUri();
         const content = await this.userStorageService.readContents(userUri);
@@ -97,7 +89,10 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         const size = this.applicationShell.mainPanel.node.offsetWidth;
         open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
         this.applicationShell.resize(size / 2, "right");
-        this.showWidget();
+        const widget = await open(this.openerService, new URI('').withScheme('preferences'));
+        if (widget) {
+            (<PreferencesWidget>widget).scope = PreferenceScope.User;
+        }
     }
 
     protected async openWorkspacePreferences(): Promise<void> {

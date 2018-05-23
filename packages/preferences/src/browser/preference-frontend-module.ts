@@ -13,13 +13,14 @@ import { PreferenceFrontendContribution } from './preference-frontend-contributi
 import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
 
 import { PreferencesWidget } from "./preferences-widget";
-import { bindViewContribution, WidgetFactory } from "@theia/core/lib/browser";
+import {bindViewContribution, OpenHandler, WidgetFactory} from "@theia/core/lib/browser";
 import {
     PREFERENCES_WIDGET_ID,
     PreferencesViewContribution
 } from "./preferences-view-contribution";
 
 import '../../src/browser/style/prefernces.css';
+import {PreferencesOpenHandler} from "./preferences-open-handler";
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);
@@ -37,6 +38,9 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
         id: PREFERENCES_WIDGET_ID,
         createWidget: () => context.container.get<PreferencesWidget>(PreferencesWidget)
     })).inSingletonScope();
+
+    bind(PreferencesOpenHandler).toSelf().inRequestScope();
+    bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler)).inSingletonScope();
 }
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {
