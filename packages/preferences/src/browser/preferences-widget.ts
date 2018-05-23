@@ -40,9 +40,6 @@ export class PreferencesWidget extends VirtualWidget {
                  @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
                  @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
         super();
-        this.id = "theia-preferences-container";
-        this.title.label = 'Prefernces';
-        this.title.closable = true;
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
 

@@ -21,6 +21,7 @@ import {
 
 import '../../src/browser/style/prefernces.css';
 import {PreferencesOpenHandler} from "./preferences-open-handler";
+import {PreferencesWidgetFactory} from "./preferences-widget-factory";
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);
@@ -41,6 +42,9 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
 
     bind(PreferencesOpenHandler).toSelf().inRequestScope();
     bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler)).inSingletonScope();
+
+    bind(PreferencesWidgetFactory).toSelf().inSingletonScope();
+    bind(WidgetFactory).toDynamicValue(ctx => ctx.container.get(PreferencesWidgetFactory)).inSingletonScope();
 }
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {

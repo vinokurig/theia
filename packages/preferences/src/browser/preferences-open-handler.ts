@@ -7,9 +7,10 @@
 
 import { injectable } from "inversify";
 import URI from "@theia/core/lib/common/uri";
-import { WidgetOpenHandler } from "@theia/core/lib/browser";
+import {PreferenceScope, WidgetOpenHandler} from "@theia/core/lib/browser";
 import {PreferencesWidget} from "./preferences-widget";
 import {PREFERENCES_WIDGET_ID} from "./preferences-view-contribution";
+import {PreferencesWidgetOptions} from "./preferences-widget-factory";
 
 @injectable()
 export class PreferencesOpenHandler extends WidgetOpenHandler<PreferencesWidget> {
@@ -18,7 +19,7 @@ export class PreferencesOpenHandler extends WidgetOpenHandler<PreferencesWidget>
 
     canHandle(uri: URI): number {
         try {
-            if (uri.scheme === 'preferences') {
+            if (uri.scheme === 'user_preferences' || uri.scheme === 'workspace_preferences') {
                 return 500;
             } else {
                 return 0;
@@ -26,6 +27,10 @@ export class PreferencesOpenHandler extends WidgetOpenHandler<PreferencesWidget>
         } catch {
             return 0;
         }
+    }
+
+    protected createWidgetOptions(uri: URI): PreferencesWidgetOptions {
+        return uri.scheme === 'workspace_preferences' ? {scope: PreferenceScope.Workspace} : {scope: PreferenceScope.User};
     }
 
 }

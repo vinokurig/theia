@@ -89,10 +89,7 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         const size = this.applicationShell.mainPanel.node.offsetWidth;
         open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
         this.applicationShell.resize(size / 2, "right");
-        const widget = await open(this.openerService, new URI('').withScheme('preferences'));
-        if (widget) {
-            (<PreferencesWidget>widget).scope = PreferenceScope.User;
-        }
+        open(this.openerService, new URI('').withScheme('user_preferences'), {scope: PreferenceScope.User});
     }
 
     protected async openWorkspacePreferences(): Promise<void> {
