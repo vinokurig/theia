@@ -33,12 +33,12 @@ export class PreferencesWidget extends VirtualWidget {
     protected preferencesGroups: PreferenceGroup[];
     protected oldPreferenceName: string;
 
-    constructor (@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
-                 @inject(GitPreferences) protected readonly gitPreferences: GitPreferences,
-                 @inject(EditorManager) protected readonly editorManager: EditorManager,
-                 @multiInject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema[],
-                 @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
-                 @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
+    constructor(@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
+                @inject(GitPreferences) protected readonly gitPreferences: GitPreferences,
+                @inject(EditorManager) protected readonly editorManager: EditorManager,
+                @multiInject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema[],
+                @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
+                @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
         super();
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
@@ -87,14 +87,15 @@ export class PreferencesWidget extends VirtualWidget {
         for (const preferenceGroup of this.preferencesGroups) {
             preferenceGroups.push(this.renderPreferenceGroup(preferenceGroup));
         }
-        return h.div({ className: "preferences-container" }, ...preferenceGroups);
+        return h.div({className: "preferences-container"}, ...preferenceGroups);
     }
 
     protected renderPreferenceGroup(group: PreferenceGroup): h.Child {
         return h.div({
                 className: "preference-group"
             },
-            h.div({className: "toggle",
+            h.div({
+                    className: "toggle",
                     onclick: () => {
                         group.isExpanded = !group.isExpanded;
                         this.update();
@@ -110,8 +111,8 @@ export class PreferencesWidget extends VirtualWidget {
         for (const preference of preferences) {
             files.push(this.renderPreferenceItem(preference));
         }
-        const commitFiles = h.div({ className: "preferences-list" }, ...files);
-        return h.div({ className: "preference-body" }, commitFiles);
+        const commitFiles = h.div({className: "preferences-list"}, ...files);
+        return h.div({className: "preference-body"}, commitFiles);
     }
 
     protected renderPreferenceItem(preference: Preference): h.Child {
@@ -135,12 +136,6 @@ export class PreferencesWidget extends VirtualWidget {
             valueContainer = h.div({className: 'preference-item-value-list'}, ...enumItems);
         } else {
             const defaultValue = property.default ? property.default : "";
-            const inputElement = h.input({
-                className: 'preference-item-value-input-input',
-                placeholder: defaultValue,
-                type: property.type ? property.type.toString() : "string",
-                id: 'value-input-' + preferenceName
-            });
             const buttonAdd = h.button({
                 className: 'preference-item-value-input-button',
                 id: preferenceName + '-value-input-button',
@@ -152,10 +147,34 @@ export class PreferencesWidget extends VirtualWidget {
                     }
                 }
             });
+            const inputElement = h.input({
+                className: 'preference-item-value-input-input',
+                placeholder: defaultValue,
+                type: property.type ? property.type.toString() : "string",
+                id: 'value-input-' + preferenceName,
+                onblur: (event: FocusEvent) => {
+                    const target: any = event.relatedTarget;
+                    if (target) {
+                        if (!target.className.startsWith('preference-item')) {
+                            this.hideValue(preferenceName);
+                        }
+                    }
+                }
+            });
             valueContainer = h.div({
                 className: 'preference-item-value-input-div',
-                id: 'value-input-id-' + preferenceName, tabindex: '0'}, inputElement, buttonAdd);
+                id: 'value-input-id-' + preferenceName, tabindex: '0',
+                onblur: (event: FocusEvent) => {
+                    const target: any = event.relatedTarget;
+                    if (target) {
+                        if (!target.className.startsWith('preference-item')) {
+                            this.hideValue(preferenceName);
+                        }
+                    }
+                }
+            }, inputElement, buttonAdd);
         }
+
         const elements: h.Child[] = [];
         const editDiv = h.div({className: "preference-item-pencil-div"},
             h.div({
@@ -180,9 +199,15 @@ export class PreferencesWidget extends VirtualWidget {
                         iconDiv.style.display = "block";
                     }
                 }
-            }, h.i({className: "icon fa fa-pencil", title: this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value'})), h.div({
+            }, h.i({
+                className: "icon fa fa-pencil",
+                title: this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value'
+            })), h.div({
                 className: 'preference-item-value-div',
-                id: 'value-container-' + preferenceName
+                id: 'value-container-' + preferenceName,
+                onblur: () => {
+                    console.log(document.activeElement);
+                }
             }, valueContainer));
         elements.push(editDiv, nameSpan);
         return h.div({className: 'preference-item-container'}, ...elements);
