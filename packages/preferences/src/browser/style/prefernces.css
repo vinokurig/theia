@@ -11,14 +11,15 @@
 
 .toggle{
     display: flex;
-    background: var(--theia-ui-expand-button-color);
+    background: var(--theia-ui-font-color3);
     padding: 5px;
     border-radius: 7px;
     margin-left: 5px;
+    margin-right: 7px;
     align-items: center;
     justify-content: flex-start;
     min-width: 30px;
-    color: var(--theia-ui-expand-button-font-color);
+    color: var(--theia-ui-font-color1);
 }
 
 .preferences-list {
@@ -31,7 +32,12 @@
     margin: 3px;
 }
 
-.preference-item-name {
+.preference-item-name-saved {
+    color: #ffff8d;
+    margin-right: 5px;
+}
+
+.preference-item-name-unsaved {
     margin-right: 5px;
 }
 

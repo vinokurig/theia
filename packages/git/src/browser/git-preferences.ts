@@ -9,7 +9,7 @@ import { interfaces } from 'inversify';
 import { createPreferenceProxy, PreferenceProxy, PreferenceService, PreferenceContribution, PreferenceSchema } from '@theia/core/lib/browser';
 
 export const GitConfigSchema: PreferenceSchema = {
-    "name": "Git Preferences",
+    "name": "Git",
     'type': 'object',
     'properties': {
         'git.decorations.enabled': {

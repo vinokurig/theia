@@ -14,7 +14,7 @@ import { GitPreferences } from "@theia/git/lib/browser/git-preferences";
 import { EditorManager } from "@theia/editor/lib/browser";
 import { ApplicationShell, PreferenceSchema, PreferenceScope } from "@theia/core/lib/browser";
 import { PreferenceProperty } from "@theia/core/lib/browser/preferences/preference-contribution";
-import { h } from '@phosphor/virtualdom';
+import { h, VirtualElement } from '@phosphor/virtualdom';
 
 export interface PreferenceGroup {
     name: string;
@@ -43,6 +43,10 @@ export class PreferencesWidget extends VirtualWidget {
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
 
+        preferenceService.onPreferenceChanged(() => {
+            this.update();
+        });
+
         for (const group of this.preferenceSchema) {
             const properties = group.properties;
             const preferencesArray: Preference[] = [];
@@ -53,7 +57,7 @@ export class PreferencesWidget extends VirtualWidget {
                 }
             }
             this.preferencesGroups.push({
-                name: group.name,
+                name: group.name.toString(),
                 preferences: preferencesArray,
                 isExpanded: false
             });
@@ -71,7 +75,7 @@ export class PreferencesWidget extends VirtualWidget {
         this.applicationShell
             .getWidgets("right")
             .forEach(widget => {
-                if (widget.id === 'code-editor-opener:user_storage:settings.json') {
+                if (widget.id.endsWith('settings.json')) {
                     widget.close();
                 }
             });
@@ -112,28 +116,19 @@ export class PreferencesWidget extends VirtualWidget {
 
     protected renderPreferenceItem(preference: Preference): h.Child {
         const preferenceName: string = preference.name;
-        const nameSpan = h.span({className: 'preference-item-name', title: preference.property.description}, preferenceName);
+        const nameSpan = h.span({
+            className: this.preferenceService.get(preferenceName) ? 'preference-item-name-saved' : 'preference-item-name-unsaved',
+            title: preference.property.description
+        }, preferenceName);
         const property = preference.property;
         const enumItems: h.Child[] = [];
         let valueContainer;
         if (property.type === 'boolean') {
-            enumItems.push(h.span({
-                className: 'preference-item-value-list-item', onclick: () => {
-                    this.handleElement(preferenceName, "true");
-                }
-            }, 'true'));
-            enumItems.push(h.span({
-                className: 'preference-item-value-list-item', onclick: () => {
-                    this.handleElement(preferenceName, "false");
-                }
-            }, 'false'));
+            enumItems.push(this.createEnumItem(preferenceName, 'true'));
+            enumItems.push(this.createEnumItem(preferenceName, 'false'));
         } else if (property.enum) {
             property.enum.forEach(item => {
-                enumItems.push(h.span({
-                    className: 'preference-item-value-list-item', onclick: () => {
-                        this.handleElement(preferenceName, item);
-                    }
-                }, item));
+                enumItems.push(this.createEnumItem(preferenceName, item));
             });
         }
         if (enumItems.length !== 0) {
@@ -185,12 +180,20 @@ export class PreferencesWidget extends VirtualWidget {
                         iconDiv.style.display = "block";
                     }
                 }
-            }, h.i({className: "icon fa fa-pencil", title: "Edit"})), h.div({
+            }, h.i({className: "icon fa fa-pencil", title: this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value'})), h.div({
                 className: 'preference-item-value-div',
                 id: 'value-container-' + preferenceName
             }, valueContainer));
         elements.push(editDiv, nameSpan);
         return h.div({className: 'preference-item-container'}, ...elements);
+    }
+
+    protected createEnumItem(preferenceName: string, value: string): VirtualElement {
+        return h.span({
+            className: 'preference-item-value-list-item', onclick: () => {
+                this.handleElement(preferenceName, value);
+            }
+        }, value);
     }
 
     protected handleElement(preferenceName: string, value: string): void {
