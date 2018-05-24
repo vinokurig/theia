@@ -8,13 +8,13 @@
 import {inject, multiInject} from "inversify";
 import { VirtualWidget } from "@theia/core/lib/browser/widgets/virtual-widget";
 import { Message } from "@phosphor/messaging";
-import { h } from '@phosphor/virtualdom';
 import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences";
 import { PreferenceService } from "../../../core/lib/browser/preferences";
-import {GitPreferences} from "@theia/git/lib/browser/git-preferences";
-import {EditorManager} from "@theia/editor/lib/browser";
-import {ApplicationShell, PreferenceSchema, PreferenceScope} from "@theia/core/lib/browser";
-import {PreferenceProperty} from "@theia/core/lib/browser/preferences/preference-contribution";
+import { GitPreferences } from "@theia/git/lib/browser/git-preferences";
+import { EditorManager } from "@theia/editor/lib/browser";
+import { ApplicationShell, PreferenceSchema, PreferenceScope } from "@theia/core/lib/browser";
+import { PreferenceProperty } from "@theia/core/lib/browser/preferences/preference-contribution";
+import { h } from '@phosphor/virtualdom';
 
 export interface PreferenceGroup {
     name: string;

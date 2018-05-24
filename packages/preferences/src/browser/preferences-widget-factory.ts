@@ -6,9 +6,9 @@
  */
 
 import { injectable, inject } from "inversify";
-import {FrontendApplication, PreferenceScope, WidgetFactory} from "@theia/core/lib/browser";
-import {PREFERENCES_WIDGET_ID} from "./preferences-view-contribution";
-import {PreferencesWidget} from "./preferences-widget";
+import { FrontendApplication, PreferenceScope, WidgetFactory } from "@theia/core/lib/browser";
+import { PreferencesWidget } from "./preferences-widget";
+import { PREFERENCES_WIDGET_ID } from "./preference-frontend-contribution";
 
 export class PreferencesWidgetOptions {
     readonly scope: PreferenceScope;
@@ -33,5 +33,4 @@ export class PreferencesWidgetFactory implements WidgetFactory {
         widget.title.iconClass = 'fa fa-sliders';
         return widget;
     }
-
 }

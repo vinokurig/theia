@@ -34,7 +34,7 @@ export namespace PreferenceCommands {
     };
 }
 
-const PREFERENCES_WIDGET_ID = 'preferences_widget';
+export const PREFERENCES_WIDGET_ID = 'preferences_widget';
 
 @injectable()
 export class PreferenceFrontendContribution extends AbstractViewContribution<PreferencesWidget> {
@@ -49,12 +49,7 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         super({
             widgetId: PREFERENCES_WIDGET_ID,
             widgetName: 'Preferences',
-            defaultWidgetOptions: {
-                area: 'main',
-                mode: 'split-right',
-                rank: 500
-            },
-            toggleKeybinding: 'ctrlcmd+shift+y'
+            defaultWidgetOptions: {area: 'main'}
         });
     }
 
