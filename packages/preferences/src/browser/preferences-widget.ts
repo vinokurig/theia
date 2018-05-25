@@ -91,11 +91,9 @@ export class PreferencesWidget extends VirtualWidget {
     }
 
     protected renderPreferenceGroup(group: PreferenceGroup): h.Child {
-        return h.div({
-                className: "preference-group"
-            },
-            h.div({
-                    className: "toggle",
+        return h.div({className: "preference-group"},
+            h.div(
+                {className: "toggle",
                     onclick: () => {
                         group.isExpanded = !group.isExpanded;
                         this.update();
@@ -103,7 +101,9 @@ export class PreferencesWidget extends VirtualWidget {
                 },
                 h.div({className: "number"}, group.name),
                 h.div({className: group.isExpanded ? "icon fa fa-caret-down" : "icon fa fa-caret-right"})
-            ), group.isExpanded ? this.renderPreferencesList(group.preferences) : "");
+            ),
+            group.isExpanded ? this.renderPreferencesList(group.preferences) : ""
+        );
     }
 
     protected renderPreferencesList(preferences: Preference[]): h.Child {
@@ -133,7 +133,7 @@ export class PreferencesWidget extends VirtualWidget {
             });
         }
         if (enumItems.length !== 0) {
-            valueContainer = h.div({className: 'preference-item-value-list'}, ...enumItems);
+            valueContainer = h.div({className: 'preference-item-value-select-container-span'}, ...enumItems);
         } else {
             const defaultValue = property.default ? property.default : "";
             const buttonAdd = h.button({
@@ -168,10 +168,7 @@ export class PreferencesWidget extends VirtualWidget {
                 onblur: onBlur
             }, inputElement, buttonAdd);
         }
-
-        const elements: h.Child[] = [];
-        const editDiv = h.div(
-            {className: "preference-item-edit-div"},
+        const editDiv = h.div({className: "preference-item-edit-div"},
             h.div({
                     className: 'preference-item-edit-icon-div',
                     id: 'pencil-icon-container-' + preferenceName,
@@ -194,26 +191,29 @@ export class PreferencesWidget extends VirtualWidget {
                             iconDiv.style.display = "block";
                         }
                     }
-                }, h.i({
+                },
+                h.i({
                     className: "icon fa fa-pencil",
                     title: this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value'
-                })), h.div({
-                className: 'preference-item-edit-panel-div',
+                })
+            ),
+            h.div({
+                className: 'preference-item-edit-container-div',
                 id: 'value-container-' + preferenceName,
-                onblur: () => {
-                    console.log(document.activeElement);
-                }
-            }, valueContainer));
-        elements.push(editDiv, nameSpan);
-        return h.div({className: 'preference-item-div'}, ...elements);
+            }, valueContainer)
+        );
+        return h.div({className: 'preference-item-div'}, editDiv, nameSpan);
     }
 
     protected createEnumItem(preferenceName: string, value: string): VirtualElement {
         return h.span({
-            className: 'preference-item-value-list-item', onclick: () => {
-                this.handleElement(preferenceName, value);
-            }
-        }, value);
+                className: 'preference-item-value-select-span',
+                onclick: () => {
+                    this.handleElement(preferenceName, value);
+                }
+            },
+            value
+        );
     }
 
     protected handleElement(preferenceName: string, value: string): void {

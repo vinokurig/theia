@@ -59,15 +59,8 @@
     padding-left: 4px;
 }
 
-.preference-item-edit-panel-div {
+.preference-item-edit-container-div {
     display: none;
-}
-
-.preference-item-value-list {
-    position: absolute;
-    background-color: var(--theia-content-font-color1);
-    color: black;
-    z-index: 1;
 }
 
 .preference-item-value-input-div {
@@ -114,12 +107,19 @@
     display: block;
 }
 
-.preference-item-value-list-item {
+.preference-item-value-select-container-span {
+    position: absolute;
+    background-color: var(--theia-content-font-color1);
+    color: black;
+    z-index: 1;
+}
+
+.preference-item-value-select-span {
     display: block;
     padding: 5px;
 }
 
-.preference-item-value-list-item:hover {
+.preference-item-value-select-span:hover {
     color: var(--theia-ui-font-color1);
     background-color: var(--theia-accent-color2);
 }
