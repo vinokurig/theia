@@ -59,7 +59,7 @@
     padding-left: 4px;
 }
 
-.preference-item-value-div {
+.preference-item-edit-panel-div {
     display: none;
 }
 
@@ -85,32 +85,32 @@
     margin-left: 3px;
 }
 
-.preference-item-container {
+.preference-item-div {
     display: flex;
 }
 
-.preference-item-container:hover {
+.preference-item-div:hover {
     background-color: var(--theia-layout-color2);
     cursor: pointer;
 }
 
-.preference-item-pencil-div {
+.preference-item-edit-div {
     width: 20px;
 }
 
-.preference-item-pencil-div:focus {
+.preference-item-edit-div:focus {
     border-style: none;
 }
 
-.preference-item-pencil-icon-container:focus {
+.preference-item-edit-icon-div:focus {
     border-style: none;
 }
 
-.preference-item-pencil-icon-container {
+.preference-item-edit-icon-div {
     display: none;
 }
 
-.preference-item-container:hover .preference-item-pencil-icon-container {
+.preference-item-div:hover .preference-item-edit-icon-div {
     display: block;
 }
 
