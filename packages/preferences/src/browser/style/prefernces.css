@@ -9,7 +9,11 @@
     color: var(--theia-ui-font-color1);
 }
 
-.toggle{
+.preference-group {
+    margin: 3px;
+}
+
+.preference-group-header-div {
     display: flex;
     background: var(--theia-ui-font-color3);
     padding: 5px;
@@ -26,10 +30,6 @@
     padding: 5px;
     border-radius: 7px;
     margin-left: 5px;
-}
-
-.preference-group {
-    margin: 3px;
 }
 
 .preference-item-name-saved {
