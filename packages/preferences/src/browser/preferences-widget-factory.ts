@@ -26,7 +26,7 @@ export class PreferencesWidgetFactory implements WidgetFactory {
         const widget = this.widget;
         widget.scope = options.scope;
         widget.id = "theia-preferences-container";
-        widget.title.label = 'Prefernces';
+        widget.title.label = 'Preferences';
         widget.title.closable = true;
         widget.title.iconClass = 'fa fa-sliders';
         return widget;

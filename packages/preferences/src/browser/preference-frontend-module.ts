@@ -16,7 +16,7 @@ import { OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
 import { PreferencesOpenHandler } from "./preferences-open-handler";
 import { PreferencesWidgetFactory } from "./preferences-widget-factory";
 import { PREFERENCES_WIDGET_ID } from "./preference-frontend-contribution";
-import '../../src/browser/style/prefernces.css';
+import '../../src/browser/style/preferences.css';
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);
