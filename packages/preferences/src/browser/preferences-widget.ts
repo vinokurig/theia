@@ -63,12 +63,6 @@ export class PreferencesWidget extends VirtualWidget {
         this.update();
     }
 
-    protected onActivateRequest(msg: Message): void {
-        super.onActivateRequest(msg);
-        this.node.focus();
-        this.update();
-    }
-
     protected onCloseRequest(msg: Message): void {
         this.applicationShell
             .getWidgets("right")
@@ -77,6 +71,7 @@ export class PreferencesWidget extends VirtualWidget {
                     widget.close();
                 }
             });
+        this.applicationShell.collapsePanel("right");
         super.onCloseRequest(msg);
     }
 
@@ -108,7 +103,7 @@ export class PreferencesWidget extends VirtualWidget {
 
     protected createPreferencesList(preferences: Preference[]): h.Child {
         const preferenceItems: h.Child[] = [];
-        preferences.forEach( preference => {
+        preferences.forEach(preference => {
             preferenceItems.push(this.createPreferenceItem(preference));
         });
         return h.div({className: "preferences-list"}, ...preferenceItems);
@@ -123,7 +118,7 @@ export class PreferencesWidget extends VirtualWidget {
             },
             preferenceName);
         const property = preference.property;
-        const onBlur = function(event: FocusEvent): void  {
+        const onBlur = function (event: FocusEvent): void {
             const relatedTarget: any = event.relatedTarget;
             if (relatedTarget && relatedTarget.className.startsWith('preference-item-value-')) {
                 return;
@@ -148,16 +143,16 @@ export class PreferencesWidget extends VirtualWidget {
             h.div(
                 {
                     className: 'preference-item-edit-icon-div',
-                    id: 'pencil-icon-container-' + preferenceName,
+                    id: preferenceName + '-edit-icon',
                     tabindex: '0',
                     onblur: onBlur,
                     onclick: () => {
                         this.update();
-                        const valueDiv = document.getElementById('value-container-' + preferenceName);
-                        if (valueDiv) {
-                            valueDiv.style.display = "block";
+                        const editDiv = document.getElementById(preferenceName + '-edit-container');
+                        if (editDiv) {
+                            editDiv.style.display = "block";
                         }
-                        const iconDiv = document.getElementById('pencil-icon-container-' + preferenceName);
+                        const iconDiv = document.getElementById(preferenceName + '-edit-icon');
                         if (iconDiv) {
                             iconDiv.style.display = "block";
                         }
@@ -173,7 +168,7 @@ export class PreferencesWidget extends VirtualWidget {
             h.div(
                 {
                     className: 'preference-item-edit-container-div',
-                    id: 'value-container-' + preferenceName,
+                    id: preferenceName + '-edit-container',
                 },
                 valueContainer)
         );
@@ -228,14 +223,13 @@ export class PreferencesWidget extends VirtualWidget {
                 className: 'preference-item-value-input-input',
                 placeholder: defaultValue,
                 type: property.type ? property.type.toString() : "string",
-                id: 'value-input-' + preferenceName,
+                id: preferenceName + '-value-input',
                 onblur: onBlur
             }
         );
         return h.div(
             {
                 className: 'preference-item-value-input-div',
-                id: 'value-input-id-' + preferenceName,
                 tabindex: '0',
                 onblur: onBlur
             },
@@ -245,11 +239,11 @@ export class PreferencesWidget extends VirtualWidget {
     }
 
     private static hideElement(preferenceName: string): void {
-        const valueDiv = document.getElementById('value-container-' + preferenceName);
+        const valueDiv = document.getElementById(preferenceName + '-edit-container');
         if (valueDiv) {
             valueDiv.style.display = 'none';
         }
-        const iconDiv = document.getElementById('pencil-icon-container-' + preferenceName);
+        const iconDiv = document.getElementById(preferenceName + '-edit-icon');
         if (iconDiv) {
             iconDiv.style.display = "none";
             iconDiv.removeAttribute('style');

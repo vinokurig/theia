@@ -93,9 +93,9 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
             await this.filesystem.createFile(wsUri.toString(), { content: this.getPreferenceTemplateForScope('workspace') });
         }
         const size = this.applicationShell.mainPanel.node.offsetWidth;
-        await open(this.openerService, wsUri, {area: "right", mode: 'open'});
+        await open(this.openerService, wsUri, {widgetOptions: {area: "right", mode: 'open'}});
         this.applicationShell.resize(size / 2, "right");
-        open(this.openerService, new URI('').withScheme('workspace_preferences'), {scope: PreferenceScope.User});
+        open(this.openerService, new URI('').withScheme('workspace_preferences'), {scope: PreferenceScope.Workspace});
     }
 
     private getPreferenceTemplateForScope(scope: string): string {
