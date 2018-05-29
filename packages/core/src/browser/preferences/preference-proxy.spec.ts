@@ -14,6 +14,7 @@ describe('preference proxy', function() {
     it('.ready should return a promise', function() {
 
         const proxy = createPreferenceProxy(new MockPreferenceService(), {
+            name: 'name',
             properties: {}
         });
         const proto = Object.getPrototypeOf(proxy.ready);

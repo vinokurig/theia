@@ -11,6 +11,7 @@ import { createPreferenceProxy, PreferenceProxy, PreferenceService, PreferenceCo
 // tslint:disable:max-line-length
 
 export const FileNavigatorConfigSchema: PreferenceSchema = {
+    "name": "File Navigator",
     'type': 'object',
     properties: {
         'navigator.autoReveal': {
@@ -46,5 +47,6 @@ export function bindFileNavigatorPreferences(bind: interfaces.Bind): void {
         const preferences = ctx.container.get<PreferenceService>(PreferenceService);
         return createNavigatorPreferences(preferences);
     });
+    bind(PreferenceSchema).toConstantValue(FileNavigatorConfigSchema);
     bind(PreferenceContribution).toConstantValue({ schema: FileNavigatorConfigSchema });
 }

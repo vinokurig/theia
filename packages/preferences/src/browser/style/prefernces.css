@@ -1,0 +1,132 @@
+/*
+ * Copyright (C) 2018 Red Hat, Inc. and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+.theia-preferences {
+    color: var(--theia-ui-font-color1);
+}
+
+.preference-group {
+    margin: 3px;
+}
+
+.preference-group-header-div {
+    display: flex;
+    background: var(--theia-ui-font-color3);
+    padding: 5px;
+    border-radius: 7px;
+    margin-left: 5px;
+    margin-right: 7px;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 30px;
+    color: var(--theia-ui-font-color1);
+}
+
+.preferences-list {
+    padding: 5px;
+    border-radius: 7px;
+    margin-left: 5px;
+}
+
+.preference-item-name-saved {
+    color: #ffff8d;
+    margin-right: 5px;
+}
+
+.preference-item-name-unsaved {
+    margin-right: 5px;
+}
+
+.preference-item-value {
+    margin-right: 5px;
+}
+
+.preference-item-input {
+    width: 25px;
+    line-height: var(--theia-content-line-height);
+    font-size: var(--theia-ui-font-size1);
+    color: var(--theia-ui-font-color1);
+    background: var(--theia-layout-color2);
+    border-style: solid;
+    border-width: 1px;
+    resize: none;
+    box-sizing: border-box;
+    height: 25px;
+    padding-left: 4px;
+}
+
+.preference-item-edit-container-div {
+    display: none;
+}
+
+.preference-item-value-input-div {
+    cursor: auto;
+    padding: 3px;
+    position: absolute;
+    background-color: var(--theia-content-font-color1);
+    color: black;
+    z-index: 1;
+}
+
+.preference-item-value {
+    color: var(--theia-ui-font-color2);
+    font-size: var(--theia-ui-font-size0);
+    margin-left: 3px;
+}
+
+.preference-item-div {
+    display: flex;
+}
+
+.preference-item-div:hover {
+    background-color: var(--theia-layout-color2);
+    cursor: pointer;
+}
+
+.preference-item-edit-div {
+    width: 20px;
+}
+
+.preference-item-edit-div:focus {
+    border-style: none;
+}
+
+.preference-item-edit-icon-div:focus {
+    border-style: none;
+}
+
+.preference-item-edit-icon-div {
+    display: none;
+}
+
+.preference-item-div:hover .preference-item-edit-icon-div {
+    display: block;
+}
+
+.preference-item-value-select-container-span {
+    position: absolute;
+    background-color: var(--theia-content-font-color1);
+    color: black;
+    z-index: 1;
+}
+
+.preference-item-value-select-span {
+    display: block;
+    padding: 5px;
+}
+
+.preference-item-value-select-span:hover {
+    color: var(--theia-ui-font-color1);
+    background-color: var(--theia-accent-color2);
+}
+
+.preference-item-value-input-input {
+    width: 150px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+    margin-left: 1px;
+}

@@ -6,12 +6,22 @@
  */
 
 import { injectable, inject, named } from "inversify";
-import { CommandContribution, MenuContribution, Command, MenuModelRegistry, CommandRegistry } from "@theia/core";
+import { Command, MenuModelRegistry, CommandRegistry } from "@theia/core";
 import { UserPreferenceProvider } from "./user-preference-provider";
-import { open, OpenerService, CommonMenus, PreferenceScope, PreferenceProvider } from "@theia/core/lib/browser";
+import {
+    open,
+    OpenerService,
+    CommonMenus,
+    PreferenceScope,
+    PreferenceProvider,
+    AbstractViewContribution,
+    ApplicationShell
+} from "@theia/core/lib/browser";
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { FileSystem } from "@theia/filesystem/lib/common";
 import { UserStorageService } from "@theia/userstorage/lib/browser";
+import { PreferencesWidget } from "./preferences-widget";
+import URI from "@theia/core/lib/common/uri";
 
 export namespace PreferenceCommands {
     export const OPEN_USER_PREFERENCES: Command = {
@@ -24,14 +34,24 @@ export namespace PreferenceCommands {
     };
 }
 
+export const PREFERENCES_WIDGET_ID = 'preferences_widget';
+
 @injectable()
-export class PreferenceFrontendContribution implements CommandContribution, MenuContribution {
+export class PreferenceFrontendContribution extends AbstractViewContribution<PreferencesWidget> {
 
     @inject(UserStorageService) protected readonly userStorageService: UserStorageService;
     @inject(PreferenceProvider) @named(PreferenceScope.User) protected readonly userPreferenceProvider: UserPreferenceProvider;
     @inject(PreferenceProvider) @named(PreferenceScope.Workspace) protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider;
     @inject(OpenerService) protected readonly openerService: OpenerService;
     @inject(FileSystem) protected readonly filesystem: FileSystem;
+
+    constructor (@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
+        super({
+            widgetId: PREFERENCES_WIDGET_ID,
+            widgetName: 'Preferences',
+            defaultWidgetOptions: {area: 'main'}
+        });
+    }
 
     registerCommands(commands: CommandRegistry): void {
         commands.registerCommand(PreferenceCommands.OPEN_USER_PREFERENCES, {
@@ -61,7 +81,10 @@ export class PreferenceFrontendContribution implements CommandContribution, Menu
             await this.userStorageService.saveContents(userUri, this.getPreferenceTemplateForScope('user'));
         }
 
-        open(this.openerService, userUri);
+        const size = this.applicationShell.mainPanel.node.offsetWidth;
+        await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
+        this.applicationShell.resize(size / 2, "right");
+        open(this.openerService, new URI('').withScheme('user_preferences'), {scope: PreferenceScope.User});
     }
 
     protected async openWorkspacePreferences(): Promise<void> {
@@ -69,7 +92,10 @@ export class PreferenceFrontendContribution implements CommandContribution, Menu
         if (!(await this.filesystem.exists(wsUri.toString()))) {
             await this.filesystem.createFile(wsUri.toString(), { content: this.getPreferenceTemplateForScope('workspace') });
         }
-        open(this.openerService, wsUri);
+        const size = this.applicationShell.mainPanel.node.offsetWidth;
+        await open(this.openerService, wsUri, {widgetOptions: {area: "right", mode: 'open'}});
+        this.applicationShell.resize(size / 2, "right");
+        open(this.openerService, new URI('').withScheme('workspace_preferences'), {scope: PreferenceScope.Workspace});
     }
 
     private getPreferenceTemplateForScope(scope: string): string {

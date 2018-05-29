@@ -15,6 +15,7 @@ import {
 } from "@theia/core/lib/browser";
 
 export const PreviewConfigSchema: PreferenceSchema = {
+  name: "Preview",
   type: "object",
   properties: {
     "preview.openByDefault": {
@@ -43,5 +44,6 @@ export function bindPreviewPreferences(bind: interfaces.Bind): void {
     const preferences = ctx.container.get<PreferenceService>(PreferenceService);
     return createPreviewPreferences(preferences);
   });
+  bind(PreferenceSchema).toConstantValue(PreviewConfigSchema);
   bind(PreferenceContribution).toConstantValue({ schema: PreviewConfigSchema });
 }

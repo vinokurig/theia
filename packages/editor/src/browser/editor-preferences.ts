@@ -16,6 +16,7 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const editorPreferenceSchema: PreferenceSchema = {
+    "name": "Editor",
     "type": "object",
     "properties": {
         "editor.tabSize": {
@@ -399,5 +400,6 @@ export function bindEditorPreferences(bind: interfaces.Bind): void {
         return createEditorPreferences(preferences);
     }).inSingletonScope();
 
+    bind(PreferenceSchema).toConstantValue(editorPreferenceSchema);
     bind(PreferenceContribution).toConstantValue({ schema: editorPreferenceSchema });
 }
