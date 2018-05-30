@@ -11,7 +11,7 @@ import { Message } from "@phosphor/messaging";
 import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences";
 import { PreferenceService } from "../../../core/lib/browser/preferences";
 import { EditorManager } from "@theia/editor/lib/browser";
-import { ApplicationShell, PreferenceSchema, PreferenceScope } from "@theia/core/lib/browser";
+import { ApplicationShell, PreferenceSchema, PreferenceSchemaProvider, PreferenceScope} from "@theia/core/lib/browser";
 import { PreferenceProperty } from "@theia/core/lib/browser/preferences/preference-contribution";
 import { h } from '@phosphor/virtualdom';
 
@@ -35,6 +35,7 @@ export class PreferencesWidget extends VirtualWidget {
                 @inject(EditorManager) protected readonly editorManager: EditorManager,
                 @multiInject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema[],
                 @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
+                @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider,
                 @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
         super();
         this.addClass('theia-preferences');

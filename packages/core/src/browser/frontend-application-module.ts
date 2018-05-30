@@ -35,7 +35,7 @@ import { StatusBar, StatusBarImpl } from "./status-bar/status-bar";
 import { LabelParser } from './label-parser';
 import { LabelProvider, LabelProviderContribution, DefaultUriLabelProviderContribution } from "./label-provider";
 import {
-    PreferenceProviders, PreferenceProvider,
+    PreferenceProviders, PreferenceProvider, PreferenceSchemaProvider,
     PreferenceScope, PreferenceService, PreferenceServiceImpl } from './preferences';
 import { ContextMenuRenderer } from './context-menu-renderer';
 import { ThemingCommandContribution, ThemeService } from './theming';
@@ -130,6 +130,8 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     for (const serviceIdentifier of [PreferenceService, FrontendApplicationContribution]) {
         bind(serviceIdentifier).toDynamicValue(ctx => ctx.container.get(PreferenceServiceImpl)).inSingletonScope();
     }
+
+    bind(PreferenceSchemaProvider).toSelf().inSingletonScope();
 
     bind(FrontendConnectionStatusService).toSelf().inSingletonScope();
     bind(ConnectionStatusService).toDynamicValue(ctx => ctx.container.get(FrontendConnectionStatusService)).inSingletonScope();
