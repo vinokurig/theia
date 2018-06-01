@@ -14,8 +14,9 @@ import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
 import { PreferencesWidget } from "./preferences-widget";
 import { OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
 import { PreferencesOpenHandler } from "./preferences-open-handler";
-import { PreferencesWidgetFactory } from "./preferences-widget-factory";
+// import { PreferencesWidgetFactory } from "./preferences-widget-factory";
 import { PREFERENCES_WIDGET_ID } from "./preference-frontend-contribution";
+import { createPreferencesTreeWidget } from "./tree/preferences-tree-container";
 import '../../src/browser/style/preferences.css';
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
@@ -31,14 +32,14 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(PreferencesWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
         id: PREFERENCES_WIDGET_ID,
-        createWidget: () => context.container.get<PreferencesWidget>(PreferencesWidget)
+        createWidget: () => createPreferencesTreeWidget(context.container)
     })).inSingletonScope();
 
     bind(PreferencesOpenHandler).toSelf().inRequestScope();
     bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler)).inSingletonScope();
 
-    bind(PreferencesWidgetFactory).toSelf().inSingletonScope();
-    bind(WidgetFactory).toDynamicValue(ctx => ctx.container.get(PreferencesWidgetFactory)).inSingletonScope();
+    // bind(PreferencesWidgetFactory).toSelf().inSingletonScope();
+    // bind(WidgetFactory).toDynamicValue(ctx => ctx.container.get(PreferencesWidgetFactory)).inSingletonScope();
 }
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {

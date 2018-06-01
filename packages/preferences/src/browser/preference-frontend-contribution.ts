@@ -15,7 +15,7 @@ import {
     PreferenceScope,
     PreferenceProvider,
     AbstractViewContribution,
-    ApplicationShell
+    ApplicationShell, OpenViewArguments
 } from "@theia/core/lib/browser";
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { FileSystem } from "@theia/filesystem/lib/common";
@@ -74,6 +74,12 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         });
     }
 
+    async openView(args?: Partial<OpenViewArguments>): Promise<PreferencesWidget> {
+        const widget = await super.openView(args);
+        widget.initializeModel();
+        return widget;
+    }
+
     protected async openUserPreferences(): Promise<void> {
         const userUri = this.userPreferenceProvider.getUri();
         const content = await this.userStorageService.readContents(userUri);
@@ -81,10 +87,10 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
             await this.userStorageService.saveContents(userUri, this.getPreferenceTemplateForScope('user'));
         }
 
-        const size = this.applicationShell.mainPanel.node.offsetWidth;
-        await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
-        this.applicationShell.resize(size / 2, "right");
-        open(this.openerService, new URI('').withScheme('user_preferences'), {scope: PreferenceScope.User});
+        // const size = this.applicationShell.mainPanel.node.offsetWidth;
+        // await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
+        // this.applicationShell.resize(size / 2, "right");
+        this.openView();
     }
 
     protected async openWorkspacePreferences(): Promise<void> {

@@ -5,15 +5,25 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { inject, multiInject } from "inversify";
-import { VirtualWidget } from "@theia/core/lib/browser/widgets/virtual-widget";
+import { inject } from "inversify";
 import { Message } from "@phosphor/messaging";
 import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences";
 import { PreferenceService } from "../../../core/lib/browser/preferences";
 import { EditorManager } from "@theia/editor/lib/browser";
-import { ApplicationShell, PreferenceSchema, PreferenceScope } from "@theia/core/lib/browser";
+import {
+    ApplicationShell, ContextMenuRenderer, ExpandableTreeNode,
+    PreferenceSchemaProvider,
+    PreferenceScope, TreeNode,
+    TreeProps,
+    TreeWidget
+} from "@theia/core/lib/browser";
 import { PreferenceProperty } from "@theia/core/lib/browser/preferences/preference-contribution";
-import { h } from '@phosphor/virtualdom';
+import { PreferencesTreeModel } from "./tree/preferences-tree-model";
+import {SelectableTreeNode} from "@theia/core/lib/browser/tree/tree-selection";
+import { DynamicMenuWidget} from "@theia/core/lib/browser/menu/browser-menu-plugin";
+import { Menu as MenuWidget } from "@phosphor/widgets";
+import {CompositeMenuNode} from "@theia/core";
+import { CommandRegistry as PhosphorCommandRegistry } from "@phosphor/commands";
 
 export interface PreferenceGroup {
     name: string;
@@ -26,25 +36,33 @@ export interface Preference {
     property: PreferenceProperty;
 }
 
-export class PreferencesWidget extends VirtualWidget {
+export class PreferencesWidget extends TreeWidget {
 
     scope: PreferenceScope;
     protected preferencesGroups: PreferenceGroup[];
 
     constructor(@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
                 @inject(EditorManager) protected readonly editorManager: EditorManager,
-                @multiInject(PreferenceSchema) protected readonly preferenceSchema: PreferenceSchema[],
+                @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider,
                 @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
-                @inject(PreferenceService) protected readonly preferenceService: PreferenceService) {
-        super();
+                @inject(PreferenceService) protected readonly preferenceService: PreferenceService,
+                @inject(PreferencesTreeModel) readonly model: PreferencesTreeModel,
+                @inject(TreeProps) protected readonly treeProps: TreeProps,
+                @inject(ContextMenuRenderer) protected readonly contextMenuRenderer: ContextMenuRenderer) {
+        super(treeProps, model, contextMenuRenderer);
         this.addClass('theia-preferences');
         this.preferencesGroups = [];
+
+        this.id = "theia-preferences-container";
+        this.title.label = 'Preferences';
+        this.title.closable = true;
+        this.title.iconClass = 'fa fa-sliders';
 
         preferenceService.onPreferenceChanged(() => {
             this.update();
         });
 
-        for (const group of this.preferenceSchema) {
+        for (const group of this.preferenceSchemaProvider.getSchemas()) {
             const properties = group.properties;
             const preferencesArray: Preference[] = [];
             for (const property in properties) {
@@ -75,178 +93,49 @@ export class PreferencesWidget extends VirtualWidget {
         super.onCloseRequest(msg);
     }
 
-    protected render(): h.Child {
-        const preferenceGroups = [];
-        for (const preferenceGroup of this.preferencesGroups) {
-            preferenceGroups.push(this.renderPreferenceGroup(preferenceGroup));
-        }
-        return h.div({className: "preferences-container"}, ...preferenceGroups);
+    protected handleContextMenuEvent(node: TreeNode | undefined, event: MouseEvent): void {
+        const contextMenu = this.createContextMenu();
+        const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
+        contextMenu.open(x, y);
     }
 
-    protected renderPreferenceGroup(group: PreferenceGroup): h.Child {
-        return h.div(
-            {className: "preference-group"},
-            h.div(
-                {
-                    className: "preference-group-header-div",
-                    onclick: () => {
-                        group.isExpanded = !group.isExpanded;
-                        this.update();
-                    }
-                },
-                group.name,
-                h.div({className: group.isExpanded ? "icon fa fa-caret-down" : "icon fa fa-caret-right"})
-            ),
-            group.isExpanded ? this.createPreferencesList(group.preferences) : ""
-        );
+    createContextMenu(): MenuWidget {
+        const menuModel: CompositeMenuNode = new CompositeMenuNode('id');
+        menuModel.addNode(new CompositeMenuNode('1'));
+        const phosphorCommands = this.createPhosporCommands(menuModel);
+
+        const contextMenu = new DynamicMenuWidget(menuModel, { commands: phosphorCommands });
+        return contextMenu;
     }
 
-    protected createPreferencesList(preferences: Preference[]): h.Child {
-        const preferenceItems: h.Child[] = [];
-        preferences.forEach(preference => {
-            preferenceItems.push(this.createPreferenceItem(preference));
-        });
-        return h.div({className: "preferences-list"}, ...preferenceItems);
+    protected createPhosporCommands(menu: CompositeMenuNode): PhosphorCommandRegistry {
+        const commands = new PhosphorCommandRegistry();
+        this.addPhosphorCommands(commands, menu);
+        return commands;
     }
 
-    protected createPreferenceItem(preference: Preference): h.Child {
-        const preferenceName: string = preference.name;
-        const nameSpan = h.span(
-            {
-                className: this.preferenceService.get(preferenceName) ? 'preference-item-name-saved' : 'preference-item-name-unsaved',
-                title: preference.property.description
-            },
-            preferenceName);
-        const property = preference.property;
-        const onBlur = function (event: FocusEvent): void {
-            const relatedTarget: any = event.relatedTarget;
-            if (relatedTarget && relatedTarget.className.startsWith('preference-item-value-')) {
-                return;
-            }
-            PreferencesWidget.hideElement(preferenceName);
-        };
-        let valueContainer: h.Child;
-        if (property.type === 'boolean' || property.enum) {
-            valueContainer = this.createEnumItems(preferenceName, property);
-        } else {
-            valueContainer = this.createInputValuePanel(preferenceName, property, onBlur);
-        }
-        const editDiv = this.createEditDiv(preferenceName, property, onBlur, valueContainer);
-        return h.div({className: 'preference-item-div'}, editDiv, nameSpan);
-    }
-
-    protected createEditDiv(preferenceName: string, property: PreferenceProperty, onBlur: (event: FocusEvent) => void, valueContainer: h.Child): h.Child {
-        return h.div(
-            {
-                className: "preference-item-edit-div"
-            },
-            h.div(
-                {
-                    className: 'preference-item-edit-icon-div',
-                    id: preferenceName + '-edit-icon',
-                    tabindex: '0',
-                    onblur: onBlur,
-                    onclick: () => {
-                        this.update();
-                        const editDiv = document.getElementById(preferenceName + '-edit-container');
-                        if (editDiv) {
-                            editDiv.style.display = "block";
-                        }
-                        const iconDiv = document.getElementById(preferenceName + '-edit-icon');
-                        if (iconDiv) {
-                            iconDiv.style.display = "block";
-                        }
-                    }
-                },
-                h.i(
-                    {
-                        className: "icon fa fa-pencil",
-                        title: this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value'
-                    }
-                )
-            ),
-            h.div(
-                {
-                    className: 'preference-item-edit-container-div',
-                    id: preferenceName + '-edit-container',
-                },
-                valueContainer)
-        );
-    }
-
-    protected createEnumItems(preferenceName: string, property: PreferenceProperty): h.Child {
-        const enumItems: h.Child[] = [];
-        if (property.type === 'boolean') {
-            enumItems.push(this.createEnumItem(preferenceName, 'true'));
-            enumItems.push(this.createEnumItem(preferenceName, 'false'));
-        } else if (property.enum) {
-            property.enum.forEach(item => {
-                enumItems.push(this.createEnumItem(preferenceName, item));
-            });
-        }
-        return h.div({className: 'preference-item-value-select-container-span'}, ...enumItems);
-    }
-
-    protected createEnumItem(preferenceName: string, value: string): h.Child {
-        return h.span(
-            {
-                className: 'preference-item-value-select-span',
-                tabindex: '0',
-                onclick: () => {
-                    this.preferenceService.set(preferenceName, value, this.scope);
-                    PreferencesWidget.hideElement(preferenceName);
+    initializeModel(): void {
+        const preferencesGroups: ExpandableTreeNode[] = [];
+        const root: ExpandableTreeNode = {id: 'id1', name: 'root', parent: undefined,  visible: true, children: preferencesGroups, expanded: false};
+        for (const group of this.preferenceSchemaProvider.getSchemas()) {
+            const properties = group.properties;
+            const propertyNodes: SelectableTreeNode[] = [];
+            const preferencesGroup: ExpandableTreeNode = {
+                id: group.name,
+                name: group.name,
+                visible: true,
+                parent: root,
+                children: propertyNodes,
+                expanded: true
+            };
+            for (const property in properties) {
+                if (property) {
+                    const node: SelectableTreeNode = {id: property, name: property, parent: preferencesGroup, visible: true, selected: false};
+                    propertyNodes.push(node);
                 }
-            },
-            value
-        );
-    }
-
-    protected createInputValuePanel(preferenceName: string, property: PreferenceProperty, onBlur: (event: FocusEvent) => void): h.Child {
-        const defaultValue = property.default ? property.default : "";
-        const buttonElement = h.button(
-            {
-                className: 'preference-item-value-input-button',
-                id: preferenceName + '-value-input-button',
-                onclick: () => {
-                    const inputValue: any = document.getElementById('value-input-' + preferenceName);
-                    if (inputValue) {
-                        const value: string = inputValue.value;
-                        this.preferenceService.set(preferenceName, value.length === 0 ? defaultValue : value, this.scope);
-                        PreferencesWidget.hideElement(preferenceName);
-                    }
-                }
-            },
-            this.preferenceService.get(preferenceName) ? 'Edit' : 'Add Value'
-        );
-        const inputElement = h.input(
-            {
-                className: 'preference-item-value-input-input',
-                placeholder: defaultValue,
-                type: property.type ? property.type.toString() : "string",
-                id: preferenceName + '-value-input',
-                onblur: onBlur
             }
-        );
-        return h.div(
-            {
-                className: 'preference-item-value-input-div',
-                tabindex: '0',
-                onblur: onBlur
-            },
-            inputElement,
-            buttonElement
-        );
-    }
-
-    private static hideElement(preferenceName: string): void {
-        const valueDiv = document.getElementById(preferenceName + '-edit-container');
-        if (valueDiv) {
-            valueDiv.style.display = 'none';
+            preferencesGroups.push(preferencesGroup);
         }
-        const iconDiv = document.getElementById(preferenceName + '-edit-icon');
-        if (iconDiv) {
-            iconDiv.style.display = "none";
-            iconDiv.removeAttribute('style');
-        }
+        this.model.root = root;
     }
 }

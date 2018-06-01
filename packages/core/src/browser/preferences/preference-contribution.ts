@@ -39,7 +39,7 @@ export type JsonType = 'string' | 'array' | 'number' | 'integer' | 'object' | 'b
 
 @injectable()
 export class PreferenceSchemaProvider {
-    protected readonly combinedSchema: PreferenceSchema;
+    protected readonly schemas: PreferenceSchema[] = [];
 
     constructor(
         @inject(ILogger) protected readonly logger: ILogger,
@@ -47,17 +47,18 @@ export class PreferenceSchemaProvider {
         protected readonly preferenceContributions: ContributionProvider<PreferenceContribution>
     ) {
         this.preferenceContributions.getContributions().forEach(contrib => {
-            for (const property in contrib.schema) {
-                if (this.combinedSchema.properties[property]) {
-                    this.logger.error("Preference name collision detected in the schema for property: " + property);
-                } else {
-                    this.combinedSchema.properties[property] = contrib.schema.properties[property];
-                }
-            }
+            // for (const property in contrib.schema) {
+            //     if (this.combinedproperties && this.combinedproperties.find(property)) {
+            //         this.logger.error("Preference name collision detected in the schema for property: " + property);
+            //     } else {
+            //         this.combinedSchema.properties[property] = contrib.schema.properties[property];
+            //     }
+            // }
+            this.schemas.push(contrib.schema);
         });
     }
 
-    getSchema(): PreferenceSchema {
-        return this.combinedSchema;
+    getSchemas(): PreferenceSchema[] {
+        return this.schemas;
     }
 }

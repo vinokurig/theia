@@ -110,7 +110,7 @@ class DynamicMenuBarWidget extends MenuBarWidget {
 /**
  * A menu widget that would recompute its items on update
  */
-class DynamicMenuWidget extends MenuWidget {
+export class DynamicMenuWidget extends MenuWidget {
 
     constructor(protected menu: CompositeMenuNode, protected options: MenuWidget.IOptions) {
         super(options);
