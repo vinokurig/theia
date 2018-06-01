@@ -93,7 +93,7 @@ export class PreferencesWidget extends TreeWidget {
     protected handleContextMenuEvent(node: TreeNode | undefined, event: MouseEvent): void {
         if (node) {
             const contextMenu = this.preferencesMenuFactory.createContextMenu1(node.id, this.map.get(node.id), (property: string, value: any) => {
-                this.preferenceService.set(property, value);
+                this.preferenceService.set(property, value, this.scope);
             });
             const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
             contextMenu.open(x, y);

@@ -32,11 +32,6 @@ export namespace PreferenceCommands {
         id: 'preferences:open_workspace',
         label: 'Open Workspace Preferences'
     };
-
-    export const CUSTOM_COMMAND: Command = {
-        id: 'preferences:custom_command',
-        label: 'Custom Command'
-    };
 }
 
 export const PREFERENCES_WIDGET_ID = 'preferences_widget';
@@ -69,27 +64,6 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
             isEnabled: () => true,
             execute: () => this.openWorkspacePreferences()
         });
-        commands.registerCommand(PreferenceCommands.CUSTOM_COMMAND, {
-            isEnabled: () => true,
-            execute: () => {}
-        });
-
-        // for (const group of this.preferenceSchemaProvider.getSchemas()) {
-        //     const properties = group.properties;
-        //     for (const property in properties) {
-        //         if (property) {
-        //             const value: PreferenceProperty = properties[property];
-        //             const enumConst = value.enum;
-        //             if (enumConst) {
-        //                 enumConst.forEach(enumValue => {
-        //                     commands.registerCommand({id: property + '-' + enumValue, label: enumValue});
-        //                 });
-        //             }
-        //         }
-        //     }
-        // }
-        // commands.registerCommand({id: 'true', label: 'true'});
-        // commands.registerCommand({id: 'false', label: 'false'});
     }
 
     registerMenus(menus: MenuModelRegistry): void {
@@ -101,9 +75,10 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         });
     }
 
-    async openView(args?: Partial<OpenViewArguments>): Promise<PreferencesWidget> {
+    async openPreferences(scope: PreferenceScope, args?: Partial<OpenViewArguments>): Promise<PreferencesWidget> {
         const widget = await super.openView(args);
         widget.initializeModel();
+        widget.scope = scope;
         return widget;
     }
 
@@ -116,7 +91,7 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         const size = this.applicationShell.mainPanel.node.offsetWidth;
         await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
         this.applicationShell.resize(size / 2, "right");
-        this.openView();
+        this.openPreferences(PreferenceScope.User);
     }
 
     protected async openWorkspacePreferences(): Promise<void> {
