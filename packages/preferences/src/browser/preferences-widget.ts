@@ -19,11 +19,8 @@ import {
 } from "@theia/core/lib/browser";
 import { PreferenceProperty } from "@theia/core/lib/browser/preferences/preference-contribution";
 import { PreferencesTreeModel } from "./tree/preferences-tree-model";
-import {SelectableTreeNode} from "@theia/core/lib/browser/tree/tree-selection";
-import { DynamicMenuWidget} from "@theia/core/lib/browser/menu/browser-menu-plugin";
-import { Menu as MenuWidget } from "@phosphor/widgets";
-import {CompositeMenuNode} from "@theia/core";
-import { CommandRegistry as PhosphorCommandRegistry } from "@phosphor/commands";
+import { SelectableTreeNode } from "@theia/core/lib/browser/tree/tree-selection";
+import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
 
 export interface PreferenceGroup {
     name: string;
@@ -40,6 +37,9 @@ export class PreferencesWidget extends TreeWidget {
 
     scope: PreferenceScope;
     protected preferencesGroups: PreferenceGroup[];
+    protected map: Map<string, PreferenceProperty> = new Map<string, PreferenceProperty>();
+
+    @inject(PreferencesBrowserMainMenuFactory) protected readonly  preferencesMenuFactory: PreferencesBrowserMainMenuFactory;
 
     constructor(@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
                 @inject(EditorManager) protected readonly editorManager: EditorManager,
@@ -58,10 +58,6 @@ export class PreferencesWidget extends TreeWidget {
         this.title.closable = true;
         this.title.iconClass = 'fa fa-sliders';
 
-        preferenceService.onPreferenceChanged(() => {
-            this.update();
-        });
-
         for (const group of this.preferenceSchemaProvider.getSchemas()) {
             const properties = group.properties;
             const preferencesArray: Preference[] = [];
@@ -69,6 +65,7 @@ export class PreferencesWidget extends TreeWidget {
                 if (property) {
                     const value: PreferenceProperty = properties[property];
                     preferencesArray.push({name: property, property: value});
+                    this.map.set(property, value);
                 }
             }
             this.preferencesGroups.push({
@@ -94,29 +91,20 @@ export class PreferencesWidget extends TreeWidget {
     }
 
     protected handleContextMenuEvent(node: TreeNode | undefined, event: MouseEvent): void {
-        const contextMenu = this.createContextMenu();
-        const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
-        contextMenu.open(x, y);
-    }
-
-    createContextMenu(): MenuWidget {
-        const menuModel: CompositeMenuNode = new CompositeMenuNode('id');
-        menuModel.addNode(new CompositeMenuNode('1'));
-        const phosphorCommands = this.createPhosporCommands(menuModel);
-
-        const contextMenu = new DynamicMenuWidget(menuModel, { commands: phosphorCommands });
-        return contextMenu;
-    }
-
-    protected createPhosporCommands(menu: CompositeMenuNode): PhosphorCommandRegistry {
-        const commands = new PhosphorCommandRegistry();
-        this.addPhosphorCommands(commands, menu);
-        return commands;
+        if (node) {
+            const contextMenu = this.preferencesMenuFactory.createContextMenu1(node.id, this.map.get(node.id), (property: string, value: any) => {
+                this.preferenceService.set(property, value);
+            });
+            const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
+            contextMenu.open(x, y);
+            event.stopPropagation();
+            event.preventDefault();
+        }
     }
 
     initializeModel(): void {
         const preferencesGroups: ExpandableTreeNode[] = [];
-        const root: ExpandableTreeNode = {id: 'id1', name: 'root', parent: undefined,  visible: true, children: preferencesGroups, expanded: false};
+        const root: ExpandableTreeNode = {id: 'id1', name: 'root', parent: undefined,  visible: true, children: preferencesGroups, expanded: true};
         for (const group of this.preferenceSchemaProvider.getSchemas()) {
             const properties = group.properties;
             const propertyNodes: SelectableTreeNode[] = [];
@@ -126,7 +114,7 @@ export class PreferencesWidget extends TreeWidget {
                 visible: true,
                 parent: root,
                 children: propertyNodes,
-                expanded: true
+                expanded: false
             };
             for (const property in properties) {
                 if (property) {

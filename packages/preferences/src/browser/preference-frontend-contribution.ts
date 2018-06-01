@@ -15,7 +15,7 @@ import {
     PreferenceScope,
     PreferenceProvider,
     AbstractViewContribution,
-    ApplicationShell, OpenViewArguments
+    ApplicationShell, OpenViewArguments, PreferenceSchemaProvider
 } from "@theia/core/lib/browser";
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { FileSystem } from "@theia/filesystem/lib/common";
@@ -32,6 +32,11 @@ export namespace PreferenceCommands {
         id: 'preferences:open_workspace',
         label: 'Open Workspace Preferences'
     };
+
+    export const CUSTOM_COMMAND: Command = {
+        id: 'preferences:custom_command',
+        label: 'Custom Command'
+    };
 }
 
 export const PREFERENCES_WIDGET_ID = 'preferences_widget';
@@ -44,6 +49,7 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
     @inject(PreferenceProvider) @named(PreferenceScope.Workspace) protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider;
     @inject(OpenerService) protected readonly openerService: OpenerService;
     @inject(FileSystem) protected readonly filesystem: FileSystem;
+    @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider;
 
     constructor (@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
         super({
@@ -63,6 +69,27 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
             isEnabled: () => true,
             execute: () => this.openWorkspacePreferences()
         });
+        commands.registerCommand(PreferenceCommands.CUSTOM_COMMAND, {
+            isEnabled: () => true,
+            execute: () => {}
+        });
+
+        // for (const group of this.preferenceSchemaProvider.getSchemas()) {
+        //     const properties = group.properties;
+        //     for (const property in properties) {
+        //         if (property) {
+        //             const value: PreferenceProperty = properties[property];
+        //             const enumConst = value.enum;
+        //             if (enumConst) {
+        //                 enumConst.forEach(enumValue => {
+        //                     commands.registerCommand({id: property + '-' + enumValue, label: enumValue});
+        //                 });
+        //             }
+        //         }
+        //     }
+        // }
+        // commands.registerCommand({id: 'true', label: 'true'});
+        // commands.registerCommand({id: 'false', label: 'false'});
     }
 
     registerMenus(menus: MenuModelRegistry): void {
@@ -86,10 +113,9 @@ export class PreferenceFrontendContribution extends AbstractViewContribution<Pre
         if (content === "") {
             await this.userStorageService.saveContents(userUri, this.getPreferenceTemplateForScope('user'));
         }
-
-        // const size = this.applicationShell.mainPanel.node.offsetWidth;
-        // await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
-        // this.applicationShell.resize(size / 2, "right");
+        const size = this.applicationShell.mainPanel.node.offsetWidth;
+        await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
+        this.applicationShell.resize(size / 2, "right");
         this.openView();
     }
 
