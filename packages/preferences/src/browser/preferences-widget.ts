@@ -7,9 +7,7 @@
 
 import { inject } from "inversify";
 import { Message } from "@phosphor/messaging";
-import { EditorPreferences } from "@theia/editor/lib/browser/editor-preferences";
 import { PreferenceService } from "../../../core/lib/browser/preferences";
-import { EditorManager } from "@theia/editor/lib/browser";
 import {
     ApplicationShell, ContextMenuRenderer, ExpandableTreeNode,
     PreferenceSchemaProvider,
@@ -17,33 +15,18 @@ import {
     TreeProps,
     TreeWidget
 } from "@theia/core/lib/browser";
-import { PreferenceProperty } from "@theia/core/lib/browser/preferences/preference-contribution";
 import { PreferencesTreeModel } from "./tree/preferences-tree-model";
 import { SelectableTreeNode } from "@theia/core/lib/browser/tree/tree-selection";
 import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
 
-export interface PreferenceGroup {
-    name: string;
-    preferences: Preference[];
-    isExpanded: boolean;
-}
-
-export interface Preference {
-    name: string;
-    property: PreferenceProperty;
-}
-
 export class PreferencesWidget extends TreeWidget {
 
     scope: PreferenceScope;
-    protected preferencesGroups: PreferenceGroup[];
-    protected map: Map<string, PreferenceProperty> = new Map<string, PreferenceProperty>();
+    protected preferencesGroupNames: string[] = [];
 
     @inject(PreferencesBrowserMainMenuFactory) protected readonly  preferencesMenuFactory: PreferencesBrowserMainMenuFactory;
 
-    constructor(@inject(EditorPreferences) protected readonly editorPreferences: EditorPreferences,
-                @inject(EditorManager) protected readonly editorManager: EditorManager,
-                @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider,
+    constructor(@inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider,
                 @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
                 @inject(PreferenceService) protected readonly preferenceService: PreferenceService,
                 @inject(PreferencesTreeModel) readonly model: PreferencesTreeModel,
@@ -51,31 +34,21 @@ export class PreferencesWidget extends TreeWidget {
                 @inject(ContextMenuRenderer) protected readonly contextMenuRenderer: ContextMenuRenderer) {
         super(treeProps, model, contextMenuRenderer);
         this.addClass('theia-preferences');
-        this.preferencesGroups = [];
 
         this.id = "theia-preferences-container";
         this.title.label = 'Preferences';
         this.title.closable = true;
         this.title.iconClass = 'fa fa-sliders';
 
-        for (const group of this.preferenceSchemaProvider.getSchemas()) {
-            const properties = group.properties;
-            const preferencesArray: Preference[] = [];
+        const properties = this.preferenceSchemaProvider.getCombinedSchema().properties;
             for (const property in properties) {
                 if (property) {
-                    const value: PreferenceProperty = properties[property];
-                    preferencesArray.push({name: property, property: value});
-                    this.map.set(property, value);
+                    const group: string = property.substring(0, property.indexOf('.'));
+                    if (this.preferencesGroupNames.indexOf(group) < 0) {
+                        this.preferencesGroupNames.push(group);
+                    }
                 }
             }
-            this.preferencesGroups.push({
-                name: group.name.toString(),
-                preferences: preferencesArray,
-                isExpanded: false
-            });
-        }
-
-        this.update();
     }
 
     protected onCloseRequest(msg: Message): void {
@@ -91,39 +64,49 @@ export class PreferencesWidget extends TreeWidget {
     }
 
     protected handleContextMenuEvent(node: TreeNode | undefined, event: MouseEvent): void {
-        if (node) {
-            const contextMenu = this.preferencesMenuFactory.createContextMenu1(node.id, this.map.get(node.id), (property: string, value: any) => {
-                this.preferenceService.set(property, value, this.scope);
-            });
+        if (node && SelectableTreeNode.is(node)) {
+            const contextMenu = this.preferencesMenuFactory.createPreferenceContextMenu(node.id,
+                this.preferenceSchemaProvider.getCombinedSchema().properties[node.id],
+                (property: string, value: any) => {
+                    this.preferenceService.set(property, value, this.scope);
+                });
             const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
             contextMenu.open(x, y);
-            event.stopPropagation();
-            event.preventDefault();
         }
+        event.stopPropagation();
+        event.preventDefault();
     }
 
     initializeModel(): void {
+        const properties = this.preferenceSchemaProvider.getCombinedSchema().properties;
         const preferencesGroups: ExpandableTreeNode[] = [];
-        const root: ExpandableTreeNode = {id: 'id1', name: 'root', parent: undefined,  visible: true, children: preferencesGroups, expanded: true};
-        for (const group of this.preferenceSchemaProvider.getSchemas()) {
-            const properties = group.properties;
+        const root: ExpandableTreeNode = {id: 'root-node-id', name: 'preferences', parent: undefined,  visible: true, children: preferencesGroups, expanded: true};
+
+        for (const group of this.preferencesGroupNames) {
             const propertyNodes: SelectableTreeNode[] = [];
-            const preferencesGroup: ExpandableTreeNode = {
-                id: group.name,
-                name: group.name,
-                visible: true,
-                parent: root,
-                children: propertyNodes,
-                expanded: false
-            };
+                const preferencesGroup: ExpandableTreeNode = {
+                    id: group + '-id',
+                    name: group,
+                    visible: true,
+                    parent: root,
+                    children: propertyNodes,
+                    expanded: false
+                };
             for (const property in properties) {
-                if (property) {
-                    const node: SelectableTreeNode = {id: property, name: property, parent: preferencesGroup, visible: true, selected: false};
+                if (property.startsWith(group)) {
+                    const node: SelectableTreeNode = {
+                        id: property,
+                        name: property.substring(property.indexOf('.') + 1),
+                        parent: preferencesGroup,
+                        visible: true,
+                        selected: false
+                    };
                     propertyNodes.push(node);
                 }
             }
             preferencesGroups.push(preferencesGroup);
         }
+
         this.model.root = root;
     }
 }

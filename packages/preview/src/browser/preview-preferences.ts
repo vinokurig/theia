@@ -15,7 +15,6 @@ import {
 } from "@theia/core/lib/browser";
 
 export const PreviewConfigSchema: PreferenceSchema = {
-  name: "Preview",
   type: "object",
   properties: {
     "preview.openByDefault": {

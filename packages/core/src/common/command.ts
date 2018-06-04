@@ -114,6 +114,12 @@ export class CommandRegistry implements CommandService {
         return this.doRegisterCommand(command);
     }
 
+    unregisterCommand(command: Command) {
+        if (this._commands[command.id]) {
+            delete this._commands[command.id];
+        }
+    }
+
     protected doRegisterCommand(command: Command): Disposable {
         this._commands[command.id] = command;
         return {
@@ -140,6 +146,12 @@ export class CommandRegistry implements CommandService {
                 }
             }
         };
+    }
+
+    unregisterHandler(commandId: string) {
+        if (this._commands[commandId]) {
+            delete this._handlers[commandId];
+        }
     }
 
     /**

@@ -15,7 +15,6 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const OutputConfigSchema: PreferenceSchema = {
-    "name": "Output",
     "type": "object",
     "properties": {
         "output.maxChannelHistory": {

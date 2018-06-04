@@ -37,7 +37,7 @@ export namespace PreferenceCommands {
 export const PREFERENCES_WIDGET_ID = 'preferences_widget';
 
 @injectable()
-export class PreferenceFrontendContribution extends AbstractViewContribution<PreferencesWidget> {
+export class PreferencesFrontendContribution extends AbstractViewContribution<PreferencesWidget> {
 
     @inject(UserStorageService) protected readonly userStorageService: UserStorageService;
     @inject(PreferenceProvider) @named(PreferenceScope.User) protected readonly userPreferenceProvider: UserPreferenceProvider;

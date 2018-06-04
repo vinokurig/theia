@@ -15,7 +15,6 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const workspacePreferenceSchema: PreferenceSchema = {
-    "name": "Workspace",
     "type": "object",
     "properties": {
         "workspace.preserveWindow": {

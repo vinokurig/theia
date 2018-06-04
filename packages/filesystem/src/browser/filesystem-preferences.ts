@@ -15,7 +15,6 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const filesystemPreferenceSchema: PreferenceSchema = {
-    "name": "File System",
     "type": "object",
     "properties": {
         "files.watcherExclude": {

@@ -9,7 +9,7 @@ import { ContainerModule, interfaces, } from 'inversify';
 import { PreferenceProvider, PreferenceScope } from "@theia/core/lib/browser/preferences";
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
-import { PreferenceFrontendContribution } from './preference-frontend-contribution';
+import { PreferencesFrontendContribution } from './preference-frontend-contribution';
 import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
 import { PreferencesWidget } from "./preferences-widget";
 import { OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
@@ -25,9 +25,9 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(PreferenceProvider).to(UserPreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.User);
     bind(PreferenceProvider).to(WorkspacePreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.Workspace);
 
-    bind(PreferenceFrontendContribution).toSelf().inSingletonScope();
-    bind(CommandContribution).toService(PreferenceFrontendContribution);
-    bind(MenuContribution).toService(PreferenceFrontendContribution);
+    bind(PreferencesFrontendContribution).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(PreferencesFrontendContribution);
+    bind(MenuContribution).toService(PreferencesFrontendContribution);
 
     bind(PreferencesWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
@@ -38,6 +38,7 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(PreferencesOpenHandler).toSelf().inRequestScope();
     bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler)).inSingletonScope();
     bind(PreferencesBrowserMainMenuFactory).toSelf();
+
     // bind(PreferencesWidgetFactory).toSelf().inSingletonScope();
     // bind(WidgetFactory).toDynamicValue(ctx => ctx.container.get(PreferencesWidgetFactory)).inSingletonScope();
 }

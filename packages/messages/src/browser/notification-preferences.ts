@@ -15,7 +15,6 @@ import {
 } from '@theia/core/lib/browser/preferences';
 
 export const NotificationConfigSchema: PreferenceSchema = {
-    "name": "Notifications",
     "type": "object",
     "properties": {
         "notification.timeout": {
