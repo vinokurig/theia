@@ -9,15 +9,16 @@ import { ContainerModule, interfaces, } from 'inversify';
 import { PreferenceProvider, PreferenceScope } from "@theia/core/lib/browser/preferences";
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
-import { PreferencesFrontendContribution } from './preference-frontend-contribution';
 import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
-import { PreferencesWidget } from "./preferences-widget";
-import { OpenHandler, WidgetFactory } from "@theia/core/lib/browser";
-import { PreferencesOpenHandler } from "./preferences-open-handler";
-import { PREFERENCES_WIDGET_ID } from "./preference-frontend-contribution";
-import { createPreferencesTreeWidget } from "./tree/preferences-tree-container";
-import '../../src/browser/style/preferences.css';
-import {PreferencesBrowserMainMenuFactory} from "./tree/preferences-menu-plugin";
+import { UserPreferencesWidget, WorkspacePreferencesWidget } from "./preferences-widget";
+import { WidgetFactory } from "@theia/core/lib/browser";
+import {
+    PreferencesFrontendContribution,
+    USER_PREFERENCES_WIDGET_ID,
+    WORKSPACE_PREFERENCES_WIDGET_ID
+} from "./preference-frontend-contribution";
+import {createUserPreferencesTreeWidget, createWorkspacePreferencesTreeWidget} from "./tree/preferences-tree-container";
+import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);
@@ -29,18 +30,19 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(CommandContribution).toService(PreferencesFrontendContribution);
     bind(MenuContribution).toService(PreferencesFrontendContribution);
 
-    bind(PreferencesWidget).toSelf();
+    bind(UserPreferencesWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
-        id: PREFERENCES_WIDGET_ID,
-        createWidget: () => createPreferencesTreeWidget(context.container)
+        id: USER_PREFERENCES_WIDGET_ID,
+        createWidget: () => createUserPreferencesTreeWidget(context.container)
     })).inSingletonScope();
 
-    bind(PreferencesOpenHandler).toSelf().inRequestScope();
-    bind(OpenHandler).toDynamicValue(ctx => ctx.container.get(PreferencesOpenHandler)).inSingletonScope();
-    bind(PreferencesBrowserMainMenuFactory).toSelf();
+    bind(WorkspacePreferencesWidget).toSelf();
+    bind(WidgetFactory).toDynamicValue(context => ({
+        id: WORKSPACE_PREFERENCES_WIDGET_ID,
+        createWidget: () => createWorkspacePreferencesTreeWidget(context.container)
+    })).inSingletonScope();
 
-    // bind(PreferencesWidgetFactory).toSelf().inSingletonScope();
-    // bind(WidgetFactory).toDynamicValue(ctx => ctx.container.get(PreferencesWidgetFactory)).inSingletonScope();
+    bind(PreferencesBrowserMainMenuFactory).toSelf();
 }
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {

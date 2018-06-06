@@ -6,28 +6,31 @@
  */
 
 import { interfaces, Container } from 'inversify';
-import { createTreeContainer, Tree, TreeImpl, TreeModel, TreeModelImpl, TreeWidget } from "@theia/core/lib/browser";
-import {PreferencesTree} from "../tree/preferences-tree";
-import {PreferencesTreeModel} from "../tree/preferences-tree-model";
-import {PreferencesWidget} from "../preferences-widget";
+import { createTreeContainer, TreeWidget } from "@theia/core/lib/browser";
+import { UserPreferencesWidget, WorkspacePreferencesWidget } from "../preferences-widget";
 
-function createPreferencesTreeContainer(parent: interfaces.Container): Container {
+function createUserPreferencesTreeContainer(parent: interfaces.Container): Container {
     const child = createTreeContainer(parent);
 
-    child.unbind(TreeImpl);
-    child.bind(PreferencesTree).toSelf();
-    child.rebind(Tree).toDynamicValue(ctx => ctx.container.get(PreferencesTree));
-
-    child.unbind(TreeModelImpl);
-    child.bind(PreferencesTreeModel).toSelf();
-    child.rebind(TreeModel).toDynamicValue(ctx => ctx.container.get(PreferencesTreeModel));
-
-    child.bind(PreferencesWidget).toSelf();
-    child.rebind(TreeWidget).toDynamicValue(ctx => ctx.container.get(PreferencesWidget));
+    child.bind(UserPreferencesWidget).toSelf();
+    child.rebind(TreeWidget).toDynamicValue(ctx => ctx.container.get(UserPreferencesWidget));
 
     return child;
 }
 
-export function createPreferencesTreeWidget(parent: interfaces.Container): PreferencesWidget {
-    return createPreferencesTreeContainer(parent).get<PreferencesWidget>(PreferencesWidget);
+export function createUserPreferencesTreeWidget(parent: interfaces.Container): UserPreferencesWidget {
+    return createUserPreferencesTreeContainer(parent).get<UserPreferencesWidget>(UserPreferencesWidget);
+}
+
+function createWorkspacePreferencesTreeContainer(parent: interfaces.Container): Container {
+    const child = createTreeContainer(parent);
+
+    child.bind(WorkspacePreferencesWidget).toSelf();
+    child.rebind(TreeWidget).toDynamicValue(ctx => ctx.container.get(WorkspacePreferencesWidget));
+
+    return child;
+}
+
+export function createWorkspacePreferencesTreeWidget(parent: interfaces.Container): UserPreferencesWidget {
+    return createWorkspacePreferencesTreeContainer(parent).get<WorkspacePreferencesWidget>(WorkspacePreferencesWidget);
 }

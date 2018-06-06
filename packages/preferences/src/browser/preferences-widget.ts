@@ -11,27 +11,27 @@ import { PreferenceService } from "../../../core/lib/browser/preferences";
 import {
     ApplicationShell, ContextMenuRenderer, ExpandableTreeNode,
     PreferenceSchemaProvider,
-    PreferenceScope, TreeNode,
+    PreferenceScope, TreeModel, TreeNode,
     TreeProps,
     TreeWidget
 } from "@theia/core/lib/browser";
-import { PreferencesTreeModel } from "./tree/preferences-tree-model";
 import { SelectableTreeNode } from "@theia/core/lib/browser/tree/tree-selection";
 import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
 
-export class PreferencesWidget extends TreeWidget {
+export abstract class PreferencesWidget extends TreeWidget {
 
-    scope: PreferenceScope;
+    abstract handleMethod: (property: string, value: any) => void;
+
     protected preferencesGroupNames: string[] = [];
 
     @inject(PreferencesBrowserMainMenuFactory) protected readonly  preferencesMenuFactory: PreferencesBrowserMainMenuFactory;
+    @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell;
+    @inject(PreferenceService) protected readonly preferenceService: PreferenceService;
 
-    constructor(@inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider,
-                @inject(ApplicationShell) protected readonly applicationShell: ApplicationShell,
-                @inject(PreferenceService) protected readonly preferenceService: PreferenceService,
-                @inject(PreferencesTreeModel) readonly model: PreferencesTreeModel,
+    constructor(@inject(TreeModel) readonly model: TreeModel,
                 @inject(TreeProps) protected readonly treeProps: TreeProps,
-                @inject(ContextMenuRenderer) protected readonly contextMenuRenderer: ContextMenuRenderer) {
+                @inject(ContextMenuRenderer) protected readonly contextMenuRenderer: ContextMenuRenderer,
+                @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider) {
         super(treeProps, model, contextMenuRenderer);
         this.addClass('theia-preferences');
 
@@ -67,9 +67,7 @@ export class PreferencesWidget extends TreeWidget {
         if (node && SelectableTreeNode.is(node)) {
             const contextMenu = this.preferencesMenuFactory.createPreferenceContextMenu(node.id,
                 this.preferenceSchemaProvider.getCombinedSchema().properties[node.id],
-                (property: string, value: any) => {
-                    this.preferenceService.set(property, value, this.scope);
-                });
+                this.handleMethod);
             const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
             contextMenu.open(x, y);
         }
@@ -108,5 +106,17 @@ export class PreferencesWidget extends TreeWidget {
         }
 
         this.model.root = root;
+    }
+}
+
+export class UserPreferencesWidget extends PreferencesWidget {
+    handleMethod = (property: string, value: any) => {
+        this.preferenceService.set(property, value, PreferenceScope.User);
+    }
+}
+
+export class WorkspacePreferencesWidget extends PreferencesWidget {
+    handleMethod = (property: string, value: any) => {
+        this.preferenceService.set(property, value, PreferenceScope.Workspace);
     }
 }
