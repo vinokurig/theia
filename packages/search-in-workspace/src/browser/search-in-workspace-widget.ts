@@ -89,6 +89,10 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
             this.hasResults = r.size > 0;
             this.update();
         }));
+
+        this.toDispose.push(this.resultTreeWidget.onFocusInput(b => {
+            this.focusInputField();
+        }));
     }
 
     storeState(): object {
@@ -133,6 +137,15 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
     }
 
     onAfterShow(msg: Message) {
+        this.focusInputField();
+    }
+
+    onActivateRequest(msg: Message) {
+        super.onActivateRequest(msg);
+        this.focusInputField();
+    }
+
+    protected focusInputField() {
         const f = document.getElementById("search-input-field");
         if (f) {
             (f as HTMLInputElement).focus();
@@ -182,7 +195,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
     protected renderControlButtons(): h.Child {
         const refreshButton = this.renderControlButton(`refresh${this.hasResults || this.searchTerm !== "" ? " enabled" : ""}`, 'Refresh', this.refresh);
         const collapseAllButton = this.renderControlButton(`collapse-all${this.hasResults ? " enabled" : ""}`, 'Collapse All', this.collapseAll);
-        const clearButton = this.renderControlButton(`clear${this.hasResults ? " enabled" : ""}`, 'Clear', this.clear);
+        const clearButton = this.renderControlButton(`clear-all${this.hasResults ? " enabled" : ""}`, 'Clear', this.clear);
         return h.div({ className: "controls button-container" }, refreshButton, collapseAllButton, clearButton);
     }
 
@@ -235,9 +248,13 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
             },
             onkeyup: e => {
                 if (e.target) {
-                    this.searchTerm = (e.target as HTMLInputElement).value;
-                    this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
-                    this.update();
+                    if (Key.ARROW_DOWN.keyCode === e.keyCode) {
+                        this.resultTreeWidget.focusFirstResult();
+                    } else {
+                        this.searchTerm = (e.target as HTMLInputElement).value;
+                        this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
+                        this.update();
+                    }
                 }
             }
         });
@@ -322,12 +339,14 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
     }
 
     protected renderExpandGlobFieldsButton(): h.Child {
-        const button = h.span({ className: "fa fa-ellipsis-h btn" });
-        return h.div({
-            className: "button-container", onclick: () => {
+        const button = h.span({
+            className: "fa fa-ellipsis-h btn", onclick: () => {
                 this.showSearchDetails = !this.showSearchDetails;
                 this.update();
             }
+        });
+        return h.div({
+            className: "button-container"
         }, button);
     }
 
