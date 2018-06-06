@@ -7,11 +7,10 @@
 
 import { inject } from "inversify";
 import { Message } from "@phosphor/messaging";
-import { PreferenceService } from "../../../core/lib/browser/preferences";
 import {
     ApplicationShell, ContextMenuRenderer, ExpandableTreeNode,
     PreferenceSchemaProvider,
-    PreferenceScope, TreeModel, TreeNode,
+    PreferenceScope, PreferenceService, TreeModel, TreeNode,
     TreeProps,
     TreeWidget
 } from "@theia/core/lib/browser";
