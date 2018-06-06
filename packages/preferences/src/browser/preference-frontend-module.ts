@@ -13,9 +13,9 @@ import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
 import { UserPreferencesWidget, WorkspacePreferencesWidget } from "./preferences-widget";
 import { WidgetFactory } from "@theia/core/lib/browser";
 import {
-    PreferencesFrontendContribution,
+    UserPreferencesFrontendContribution,
     USER_PREFERENCES_WIDGET_ID,
-    WORKSPACE_PREFERENCES_WIDGET_ID
+    WORKSPACE_PREFERENCES_WIDGET_ID, WorkspacePreferencesFrontendContribution
 } from "./preference-frontend-contribution";
 import {createUserPreferencesTreeWidget, createWorkspacePreferencesTreeWidget} from "./tree/preferences-tree-container";
 import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
@@ -26,9 +26,13 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(PreferenceProvider).to(UserPreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.User);
     bind(PreferenceProvider).to(WorkspacePreferenceProvider).inSingletonScope().whenTargetNamed(PreferenceScope.Workspace);
 
-    bind(PreferencesFrontendContribution).toSelf().inSingletonScope();
-    bind(CommandContribution).toService(PreferencesFrontendContribution);
-    bind(MenuContribution).toService(PreferencesFrontendContribution);
+    bind(UserPreferencesFrontendContribution).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(UserPreferencesFrontendContribution);
+    bind(MenuContribution).toService(UserPreferencesFrontendContribution);
+
+    bind(WorkspacePreferencesFrontendContribution).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(WorkspacePreferencesFrontendContribution);
+    bind(MenuContribution).toService(WorkspacePreferencesFrontendContribution);
 
     bind(UserPreferencesWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({

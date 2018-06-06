@@ -15,12 +15,12 @@ import {
     PreferenceScope,
     PreferenceProvider,
     AbstractViewContribution,
-    PreferenceSchemaProvider, ApplicationShell
+    ApplicationShell
 } from "@theia/core/lib/browser";
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { FileSystem } from "@theia/filesystem/lib/common";
 import { UserStorageService } from "@theia/userstorage/lib/browser";
-import {PreferencesWidget, UserPreferencesWidget, WorkspacePreferencesWidget} from "./preferences-widget";
+import { UserPreferencesWidget, WorkspacePreferencesWidget } from "./preferences-widget";
 import { Widget } from "@phosphor/widgets";
 
 export namespace PreferenceCommands {
@@ -37,19 +37,25 @@ export namespace PreferenceCommands {
 export const USER_PREFERENCES_WIDGET_ID = 'user_preferences_widget';
 export const WORKSPACE_PREFERENCES_WIDGET_ID = 'workspace_preferences_widget';
 
+const getPreferenceTemplateForScope = function(scope: string): string {
+    return `/*
+Preference file for ${scope} scope
+
+Please refer to the documentation online (https://github.com/theia-ide/theia/blob/master/packages/preferences/README.md) to learn how preferences work in Theia
+*/`;
+};
+
 @injectable()
-export class PreferencesFrontendContribution<T extends Widget> extends AbstractViewContribution<PreferencesWidget> {
+export class UserPreferencesFrontendContribution<T extends Widget> extends AbstractViewContribution<UserPreferencesWidget> {
 
     @inject(UserStorageService) protected readonly userStorageService: UserStorageService;
     @inject(PreferenceProvider) @named(PreferenceScope.User) protected readonly userPreferenceProvider: UserPreferenceProvider;
-    @inject(PreferenceProvider) @named(PreferenceScope.Workspace) protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider;
     @inject(OpenerService) protected readonly openerService: OpenerService;
     @inject(FileSystem) protected readonly filesystem: FileSystem;
-    @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider;
 
     constructor (@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
         super({
-            widgetId: 'preferences_widget',
+            widgetId: USER_PREFERENCES_WIDGET_ID,
             widgetName: 'Preferences',
             defaultWidgetOptions: {area: 'main'}
         });
@@ -60,23 +66,15 @@ export class PreferencesFrontendContribution<T extends Widget> extends AbstractV
             isEnabled: () => true,
             execute: () => this.openUserPreferences()
         });
-
-        commands.registerCommand(PreferenceCommands.OPEN_WORKSPACE_PREFERENCES, {
-            isEnabled: () => true,
-            execute: () => this.openWorkspacePreferences()
-        });
     }
 
     registerMenus(menus: MenuModelRegistry): void {
         menus.registerMenuAction(CommonMenus.FILE_OPEN, {
             commandId: PreferenceCommands.OPEN_USER_PREFERENCES.id
         });
-        menus.registerMenuAction(CommonMenus.FILE_OPEN, {
-            commandId: PreferenceCommands.OPEN_WORKSPACE_PREFERENCES.id
-        });
     }
 
-    async openPreferences(): Promise<PreferencesWidget> {
+    async openPreferences(): Promise<UserPreferencesWidget> {
         const widget = await super.openView(undefined);
         widget.initializeModel();
         return widget;
@@ -86,91 +84,57 @@ export class PreferencesFrontendContribution<T extends Widget> extends AbstractV
         const userUri = this.userPreferenceProvider.getUri();
         const content = await this.userStorageService.readContents(userUri);
         if (content === "") {
-            await this.userStorageService.saveContents(userUri, this.getPreferenceTemplateForScope('user'));
+            await this.userStorageService.saveContents(userUri, getPreferenceTemplateForScope('user'));
         }
         const size = this.applicationShell.mainPanel.node.offsetWidth;
         await open(this.openerService, userUri, {widgetOptions: {area: "right", mode: 'open'}});
         this.applicationShell.resize(size / 2, "right");
         this.openPreferences();
     }
+}
+
+@injectable()
+export class WorkspacePreferencesFrontendContribution extends AbstractViewContribution<WorkspacePreferencesWidget> {
+
+    @inject(PreferenceProvider) @named(PreferenceScope.Workspace) protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider;
+    @inject(OpenerService) protected readonly openerService: OpenerService;
+    @inject(FileSystem) protected readonly filesystem: FileSystem;
+
+    constructor (@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
+        super({
+            widgetId: WORKSPACE_PREFERENCES_WIDGET_ID,
+            widgetName: 'Workspace Preferences',
+            defaultWidgetOptions: {area: 'main'}
+        });
+    }
+
+    registerCommands(commands: CommandRegistry): void {
+        commands.registerCommand(PreferenceCommands.OPEN_WORKSPACE_PREFERENCES, {
+            isEnabled: () => true,
+            execute: () => this.openWorkspacePreferences()
+        });
+    }
+
+    registerMenus(menus: MenuModelRegistry): void {
+        menus.registerMenuAction(CommonMenus.FILE_OPEN, {
+            commandId: PreferenceCommands.OPEN_WORKSPACE_PREFERENCES.id
+        });
+    }
+
+    async openPreferences(): Promise<WorkspacePreferencesWidget> {
+        const widget = await super.openView(undefined);
+        widget.initializeModel();
+        return widget;
+    }
 
     protected async openWorkspacePreferences(): Promise<void> {
         const wsUri = await this.workspacePreferenceProvider.getUri();
         if (!(await this.filesystem.exists(wsUri.toString()))) {
-            await this.filesystem.createFile(wsUri.toString(), { content: this.getPreferenceTemplateForScope('workspace') });
+            await this.filesystem.createFile(wsUri.toString(), { content: getPreferenceTemplateForScope('workspace') });
         }
         const size = this.applicationShell.mainPanel.node.offsetWidth;
         await open(this.openerService, wsUri, {widgetOptions: {area: "right", mode: 'open'}});
         this.applicationShell.resize(size / 2, "right");
         this.openPreferences();
     }
-
-    private getPreferenceTemplateForScope(scope: string): string {
-        return `/*
-Preference file for ${scope} scope
-
-Please refer to the documentation online (https://github.com/theia-ide/theia/blob/master/packages/preferences/README.md) to learn how preferences work in Theia
-*/`;
-    }
 }
-
-export class UserPreferencesFrontendContribution extends PreferencesFrontendContribution<UserPreferencesWidget> {
-    get widget(): Promise<UserPreferencesWidget> {
-        return this.widgetManager.getOrCreateWidget<UserPreferencesWidget>(USER_PREFERENCES_WIDGET_ID);
-    }
-}
-
-export class WorkspacePreferencesFrontendContribution extends PreferencesFrontendContribution<WorkspacePreferencesWidget> {
-    get widget(): Promise<UserPreferencesWidget> {
-        return this.widgetManager.getOrCreateWidget<WorkspacePreferencesWidget>(WORKSPACE_PREFERENCES_WIDGET_ID);
-    }
-}
-
-// @injectable()
-// export class WorkspacePreferencesFrontendContribution extends AbstractViewContribution<WorkspacePreferencesWidget> {
-//
-//     @inject(UserStorageService) protected readonly userStorageService: UserStorageService;
-//     @inject(PreferenceProvider) @named(PreferenceScope.User) protected readonly userPreferenceProvider: UserPreferenceProvider;
-//     @inject(PreferenceProvider) @named(PreferenceScope.Workspace) protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider;
-//     @inject(OpenerService) protected readonly openerService: OpenerService;
-//     @inject(FileSystem) protected readonly filesystem: FileSystem;
-//     @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider;
-//
-//     constructor (@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
-//         super({
-//             widgetId: WORKSPACE_PREFERENCES_WIDGET_ID,
-//             widgetName: 'Workspace Preferences',
-//             defaultWidgetOptions: {area: 'main'}
-//         });
-//     }
-//
-//     registerCommands(commands: CommandRegistry): void {
-//         commands.registerCommand(PreferenceCommands.OPEN_WORKSPACE_PREFERENCES, {
-//             isEnabled: () => true,
-//             execute: () => this.openWorkspacePreferences()
-//         });
-//     }
-//
-//     registerMenus(menus: MenuModelRegistry): void {
-//         menus.registerMenuAction(CommonMenus.FILE_OPEN, {
-//             commandId: PreferenceCommands.OPEN_WORKSPACE_PREFERENCES.id
-//         });
-//     }
-//
-//     async openPreferences(): Promise<WorkspacePreferencesWidget> {
-//         const widget = await super.openView(undefined);
-//         widget.initializeModel();
-//         return widget;
-//     }
-//
-//     protected async openWorkspacePreferences(): Promise<void> {
-//         const wsUri = await this.workspacePreferenceProvider.getUri();
-//         if (!(await this.filesystem.exists(wsUri.toString()))) {
-//             await this.filesystem.createFile(wsUri.toString(), { content: getPreferenceTemplateForScope('workspace') });
-//         }
-//         const size = this.applicationShell.mainPanel.node.offsetWidth;
-//         await open(this.openerService, wsUri, {widgetOptions: {area: "right", mode: 'open'}});
-//         this.applicationShell.resize(size / 2, "right");
-//         this.openPreferences();
-//     }
-// }
