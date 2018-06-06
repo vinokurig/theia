@@ -36,7 +36,7 @@ export abstract class PreferencesWidget extends TreeWidget {
         this.addClass('theia-preferences');
 
         this.id = "theia-preferences-container";
-        this.title.label = 'Preferences';
+        this.title.label = this instanceof UserPreferencesWidget ? 'User Preferences' : 'Workspace Preferences';
         this.title.closable = true;
         this.title.iconClass = 'fa fa-sliders';
 

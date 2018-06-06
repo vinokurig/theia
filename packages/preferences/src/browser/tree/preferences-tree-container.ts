@@ -31,6 +31,6 @@ function createWorkspacePreferencesTreeContainer(parent: interfaces.Container): 
     return child;
 }
 
-export function createWorkspacePreferencesTreeWidget(parent: interfaces.Container): UserPreferencesWidget {
+export function createWorkspacePreferencesTreeWidget(parent: interfaces.Container): WorkspacePreferencesWidget {
     return createWorkspacePreferencesTreeContainer(parent).get<WorkspacePreferencesWidget>(WorkspacePreferencesWidget);
 }
