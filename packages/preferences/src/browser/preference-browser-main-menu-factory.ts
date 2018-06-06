@@ -6,11 +6,11 @@
  */
 
 import { inject, injectable } from "inversify";
-import { BrowserMainMenuFactory, DynamicMenuWidget } from "@theia/core/lib/browser/menu/browser-menu-plugin";
+import { BrowserMainMenuFactory, DynamicMenuWidget } from "../../../core/src/browser/menu/browser-menu-plugin";
 import { Menu as MenuWidget} from "@phosphor/widgets";
 import { ActionMenuNode, Command, CompositeMenuNode } from "@theia/core";
-import { CommandRegistry } from "@theia/core/lib/common/command";
-import { PreferenceProperty } from "@theia/core/lib/browser";
+import { CommandRegistry } from "../../../core/src/common/command";
+import { PreferenceProperty } from "../../../core/src/browser/index";
 
 @injectable()
 export class PreferencesBrowserMainMenuFactory extends BrowserMainMenuFactory {
@@ -59,9 +59,10 @@ export class PreferencesBrowserMainMenuFactory extends BrowserMainMenuFactory {
         const menu = new DynamicMenuWidget(menuModel, {commands: phosphorCommands});
         menu.aboutToClose.connect(() => {
             this.commandsStorage.forEach(command => {
-                this.commands.unregisterCommand(command);
+                this.commands.unregisterCommand(command.id);
                 this.commands.unregisterHandler(command.id);
             });
+            this.commandsStorage = [];
         });
         return menu;
     }

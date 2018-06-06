@@ -6,8 +6,8 @@
  */
 
 import { interfaces, Container } from 'inversify';
-import { createTreeContainer, TreeWidget } from "@theia/core/lib/browser";
-import { UserPreferencesWidget, WorkspacePreferencesWidget } from "../preferences-widget";
+import { createTreeContainer, TreeWidget } from "../../../core/src/browser/index";
+import { UserPreferencesWidget, WorkspacePreferencesWidget } from "./preferences-widget";
 
 function createUserPreferencesTreeContainer(parent: interfaces.Container): Container {
     const child = createTreeContainer(parent);

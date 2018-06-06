@@ -16,7 +16,7 @@ import {
     TreeWidget
 } from "@theia/core/lib/browser";
 import { SelectableTreeNode } from "@theia/core/lib/browser/tree/tree-selection";
-import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
+import { PreferencesBrowserMainMenuFactory } from "./preference-browser-main-menu-factory";
 
 export abstract class PreferencesWidget extends TreeWidget {
 

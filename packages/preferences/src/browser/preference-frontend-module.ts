@@ -17,8 +17,8 @@ import {
     USER_PREFERENCES_WIDGET_ID,
     WORKSPACE_PREFERENCES_WIDGET_ID, WorkspacePreferencesFrontendContribution
 } from "./preference-frontend-contribution";
-import {createUserPreferencesTreeWidget, createWorkspacePreferencesTreeWidget} from "./tree/preferences-tree-container";
-import { PreferencesBrowserMainMenuFactory } from "./tree/preferences-menu-plugin";
+import { createUserPreferencesTreeWidget, createWorkspacePreferencesTreeWidget } from "./preference-tree-container";
+import { PreferencesBrowserMainMenuFactory } from "./preference-browser-main-menu-factory";
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);
