@@ -19,8 +19,9 @@ import { ExtensionChange } from './extension-protocol';
  *
  * The user code should access extensions and listen to their changes with the extension manager.
  */
-export class Extension extends protocol.Extension {
+export class Extension extends protocol.Extension implements Disposable {
 
+    protected readonly toDispose = new DisposableCollection();
     protected readonly onDidChangedEmitter = new Emitter<ExtensionChange>();
 
     constructor(extension: protocol.Extension,
@@ -28,12 +29,22 @@ export class Extension extends protocol.Extension {
         protected readonly manager: ExtensionManager) {
         super();
         Object.assign(this, extension);
-        manager.onDidChange(change => {
+        this.toDispose.push(this.onDidChangedEmitter);
+
+        manager.onDidChange.maxListeners = manager.onDidChange.maxListeners + 1;
+        this.toDispose.push(manager.onDidChange(change => {
             if (change.name === this.name) {
                 Object.assign(this, change);
                 this.onDidChangedEmitter.fire(change);
             }
-        });
+        }));
+        this.toDispose.push(Disposable.create(() =>
+            manager.onDidChange.maxListeners = manager.onDidChange.maxListeners - 1)
+        );
+    }
+
+    dispose(): void {
+        this.toDispose.dispose();
     }
 
     get onDidChange(): Event<ExtensionChange> {
@@ -86,7 +97,6 @@ export type ResolvedExtension = Extension & protocol.ResolvedExtension;
  * - listen to changes of:
  *   - installed extension;
  *   - and the installation process.
-
  */
 @injectable()
 export class ExtensionManager implements Disposable {
@@ -147,7 +157,7 @@ export class ExtensionManager implements Disposable {
         this.onChangedEmitter.fire(change);
     }
 
-    /**InsrallationResultInsrallationResult
+    /**
      * Notify when the installation process is going to be started.
      */
     get onWillStartInstallation(): Event<protocol.InstallationParam> {

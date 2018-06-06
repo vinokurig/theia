@@ -14,11 +14,9 @@ import { createFileNavigatorWidget } from "./navigator-container";
 import { WidgetFactory } from '@theia/core/lib/browser/widget-manager';
 import { bindFileNavigatorPreferences } from './navigator-preferences';
 import { FileNavigatorFilter } from './navigator-filter';
-import { NavigatorTreeDecorator } from './navigator-decorator-service';
 import { FuzzySearch } from './fuzzy-search';
-import { FileNavigatorSearch } from './navigator-search';
 import { SearchBox, SearchBoxProps, SearchBoxFactory } from './search-box';
-import { SearchBoxDebounce, SearchBoxDebounceOptions } from './search-box-debounce';
+import { SearchBoxDebounce } from './search-box-debounce';
 import '../../src/browser/style/index.css';
 
 export default new ContainerModule(bind => {
@@ -30,18 +28,10 @@ export default new ContainerModule(bind => {
     bind(KeybindingContext).to(NavigatorActiveContext).inSingletonScope();
 
     bind(FuzzySearch).toSelf().inSingletonScope();
-    bind(FileNavigatorSearch).toSelf().inSingletonScope();
-    bind(NavigatorTreeDecorator).toService(FileNavigatorSearch);
-    bind(SearchBoxDebounceOptions).toConstantValue(SearchBoxDebounceOptions.DEFAULT);
-    bind(SearchBoxDebounce).toSelf();
-    bind(SearchBox).toSelf();
     bind(SearchBoxFactory).toFactory(context =>
-        (props: SearchBoxProps) => {
-            const { container } = context;
-            const { delay } = props;
-            container.bind(SearchBoxDebounceOptions).toConstantValue({ delay });
-            container.bind(SearchBoxProps).toConstantValue(props);
-            return container.get(SearchBox);
+        (options: SearchBoxProps) => {
+            const debounce = new SearchBoxDebounce(options);
+            return new SearchBox(options, debounce);
         }
     );
 
