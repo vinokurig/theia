@@ -43,6 +43,5 @@ export function bindPreviewPreferences(bind: interfaces.Bind): void {
     const preferences = ctx.container.get<PreferenceService>(PreferenceService);
     return createPreviewPreferences(preferences);
   });
-  bind(PreferenceSchema).toConstantValue(PreviewConfigSchema);
   bind(PreferenceContribution).toConstantValue({ schema: PreviewConfigSchema });
 }

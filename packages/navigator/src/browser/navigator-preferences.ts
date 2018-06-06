@@ -46,6 +46,5 @@ export function bindFileNavigatorPreferences(bind: interfaces.Bind): void {
         const preferences = ctx.container.get<PreferenceService>(PreferenceService);
         return createNavigatorPreferences(preferences);
     });
-    bind(PreferenceSchema).toConstantValue(FileNavigatorConfigSchema);
     bind(PreferenceContribution).toConstantValue({ schema: FileNavigatorConfigSchema });
 }

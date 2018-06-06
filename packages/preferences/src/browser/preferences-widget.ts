@@ -18,9 +18,9 @@ import {
 import { SelectableTreeNode } from "@theia/core/lib/browser/tree/tree-selection";
 import { PreferencesBrowserMainMenuFactory } from "./preference-browser-main-menu-factory";
 
-export abstract class PreferencesWidget extends TreeWidget {
+export abstract class PreferencesTreeWidget extends TreeWidget {
 
-    abstract handleMethod: (property: string, value: any) => void;
+    abstract handlePropertySelection: (property: string, value: any) => void;
 
     protected preferencesGroupNames: string[] = [];
 
@@ -36,7 +36,7 @@ export abstract class PreferencesWidget extends TreeWidget {
         this.addClass('theia-preferences');
 
         this.id = "theia-preferences-container";
-        this.title.label = this instanceof UserPreferencesWidget ? 'User Preferences' : 'Workspace Preferences';
+        this.title.label = this instanceof UserPreferencesTreeWidget ? 'User Preferences' : 'Workspace Preferences';
         this.title.closable = true;
         this.title.iconClass = 'fa fa-sliders';
 
@@ -67,7 +67,7 @@ export abstract class PreferencesWidget extends TreeWidget {
         if (node && SelectableTreeNode.is(node)) {
             const contextMenu = this.preferencesMenuFactory.createPreferenceContextMenu(node.id,
                 this.preferenceSchemaProvider.getCombinedSchema().properties[node.id],
-                this.handleMethod);
+                this.handlePropertySelection);
             const { x, y } = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : event;
             contextMenu.open(x, y);
         }
@@ -109,14 +109,14 @@ export abstract class PreferencesWidget extends TreeWidget {
     }
 }
 
-export class UserPreferencesWidget extends PreferencesWidget {
-    handleMethod = (property: string, value: any) => {
+export class UserPreferencesTreeWidget extends PreferencesTreeWidget {
+    handlePropertySelection = (property: string, value: any) => {
         this.preferenceService.set(property, value, PreferenceScope.User);
     }
 }
 
-export class WorkspacePreferencesWidget extends PreferencesWidget {
-    handleMethod = (property: string, value: any) => {
+export class WorkspacePreferencesTreeWidget extends PreferencesTreeWidget {
+    handlePropertySelection = (property: string, value: any) => {
         this.preferenceService.set(property, value, PreferenceScope.Workspace);
     }
 }

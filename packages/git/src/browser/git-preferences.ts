@@ -53,6 +53,5 @@ export function bindGitPreferences(bind: interfaces.Bind): void {
         const preferences = ctx.container.get<PreferenceService>(PreferenceService);
         return createGitPreferences(preferences);
     });
-    bind(PreferenceSchema).toConstantValue(GitConfigSchema);
     bind(PreferenceContribution).toConstantValue({ schema: GitConfigSchema });
 }

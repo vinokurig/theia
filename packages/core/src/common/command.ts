@@ -114,6 +114,9 @@ export class CommandRegistry implements CommandService {
         return this.doRegisterCommand(command);
     }
 
+    /**
+     * Unregister command by it's identifier.
+     */
     unregisterCommand(commandId: string) {
         if (this._commands[commandId]) {
             delete this._commands[commandId];
@@ -148,6 +151,9 @@ export class CommandRegistry implements CommandService {
         };
     }
 
+    /**
+     * Unregister command handler by command identifier.
+     */
     unregisterHandler(commandId: string) {
         if (this._commands[commandId]) {
             delete this._handlers[commandId];

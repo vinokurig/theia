@@ -15,14 +15,14 @@ import {
     PreferenceScope,
     PreferenceProvider,
     AbstractViewContribution,
-    ApplicationShell, PreferenceSchemaProvider
+    ApplicationShell
 } from "@theia/core/lib/browser";
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { FileSystem } from "@theia/filesystem/lib/common";
 import { UserStorageService } from "@theia/userstorage/lib/browser";
-import {PreferencesWidget, UserPreferencesWidget, WorkspacePreferencesWidget} from "./preferences-widget";
-import {Widget} from "@phosphor/widgets";
-import {ViewContributionOptions} from "@theia/core/lib/browser/shell/view-contribution";
+import { PreferencesTreeWidget, UserPreferencesTreeWidget, WorkspacePreferencesTreeWidget } from "./preferences-widget";
+import { Widget } from "@phosphor/widgets";
+import { ViewContributionOptions } from "@theia/core/lib/browser/shell/view-contribution";
 
 export namespace PreferenceCommands {
     export const OPEN_USER_PREFERENCES: Command = {
@@ -39,20 +39,19 @@ export const USER_PREFERENCES_WIDGET_ID = 'user_preferences_widget';
 export const WORKSPACE_PREFERENCES_WIDGET_ID = 'workspace_preferences_widget';
 
 @injectable()
-export class PreferencesFrontendContribution<T extends Widget> extends AbstractViewContribution<PreferencesWidget> {
+export class PreferencesFrontendContribution<T extends Widget> extends AbstractViewContribution<PreferencesTreeWidget> {
 
     @inject(UserStorageService) protected readonly userStorageService: UserStorageService;
     @inject(PreferenceProvider) @named(PreferenceScope.User) protected readonly userPreferenceProvider: UserPreferenceProvider;
     @inject(PreferenceProvider) @named(PreferenceScope.Workspace) protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider;
     @inject(OpenerService) protected readonly openerService: OpenerService;
     @inject(FileSystem) protected readonly filesystem: FileSystem;
-    @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider;
 
     constructor (protected readonly applicationShell: ApplicationShell, protected readonly options: ViewContributionOptions) {
         super(options);
     }
 
-    async openPreferences(): Promise<PreferencesWidget> {
+    async openPreferences(): Promise<PreferencesTreeWidget> {
         const widget = await super.openView(undefined);
         widget.initializeModel();
         return widget;
@@ -68,7 +67,7 @@ Please refer to the documentation online (https://github.com/theia-ide/theia/blo
 }
 
 @injectable()
-export class UserPreferencesFrontendContribution extends PreferencesFrontendContribution<UserPreferencesWidget> {
+export class UserPreferencesFrontendContribution extends PreferencesFrontendContribution<UserPreferencesTreeWidget> {
     constructor(@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
         super (applicationShell, {
             widgetId: USER_PREFERENCES_WIDGET_ID,
@@ -104,7 +103,7 @@ export class UserPreferencesFrontendContribution extends PreferencesFrontendCont
 }
 
 @injectable()
-export class WorkspacePreferencesFrontendContribution extends PreferencesFrontendContribution<WorkspacePreferencesWidget> {
+export class WorkspacePreferencesFrontendContribution extends PreferencesFrontendContribution<WorkspacePreferencesTreeWidget> {
     constructor(@inject(ApplicationShell) protected readonly applicationShell: ApplicationShell) {
         super (applicationShell, {
             widgetId: WORKSPACE_PREFERENCES_WIDGET_ID,

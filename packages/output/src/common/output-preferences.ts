@@ -42,6 +42,5 @@ export function bindOutputPreferences(bind: interfaces.Bind): void {
         return createOutputPreferences(preferences);
     });
 
-    bind(PreferenceSchema).toConstantValue(OutputConfigSchema);
     bind(PreferenceContribution).toConstantValue({ schema: OutputConfigSchema });
 }

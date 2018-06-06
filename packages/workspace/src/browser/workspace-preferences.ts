@@ -44,6 +44,5 @@ export function bindWorkspacePreferences(bind: interfaces.Bind): void {
         return createWorkspacePreferences(preferences);
     }).inSingletonScope();
 
-    bind(PreferenceSchema).toConstantValue(workspacePreferenceSchema);
     bind(PreferenceContribution).toConstantValue({ schema: workspacePreferenceSchema });
 }

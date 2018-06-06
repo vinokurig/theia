@@ -42,6 +42,5 @@ export function bindNotificationPreferences(bind: interfaces.Bind): void {
         return createNotificationPreferences(preferences);
     });
 
-    bind(PreferenceSchema).toConstantValue(NotificationConfigSchema);
     bind(PreferenceContribution).toConstantValue({ schema: NotificationConfigSchema });
 }

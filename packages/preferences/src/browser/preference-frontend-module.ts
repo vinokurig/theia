@@ -10,7 +10,7 @@ import { PreferenceProvider, PreferenceScope } from "@theia/core/lib/browser/pre
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
 import { MenuContribution, CommandContribution } from '@theia/core/lib/common';
-import { UserPreferencesWidget, WorkspacePreferencesWidget } from "./preferences-widget";
+import { UserPreferencesTreeWidget, WorkspacePreferencesTreeWidget } from "./preferences-widget";
 import { WidgetFactory } from "@theia/core/lib/browser";
 import {
     UserPreferencesFrontendContribution,
@@ -34,13 +34,13 @@ export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind
     bind(CommandContribution).toService(WorkspacePreferencesFrontendContribution);
     bind(MenuContribution).toService(WorkspacePreferencesFrontendContribution);
 
-    bind(UserPreferencesWidget).toSelf();
+    bind(UserPreferencesTreeWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
         id: USER_PREFERENCES_WIDGET_ID,
         createWidget: () => createUserPreferencesTreeWidget(context.container)
     })).inSingletonScope();
 
-    bind(WorkspacePreferencesWidget).toSelf();
+    bind(WorkspacePreferencesTreeWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
         id: WORKSPACE_PREFERENCES_WIDGET_ID,
         createWidget: () => createWorkspacePreferencesTreeWidget(context.container)
