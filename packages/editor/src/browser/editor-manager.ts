@@ -18,7 +18,7 @@ import { injectable, postConstruct, } from "inversify";
 import URI from "@theia/core/lib/common/uri";
 import { RecursivePartial, Emitter, Event } from '@theia/core/lib/common';
 import { WidgetOpenHandler, WidgetOpenerOptions } from "@theia/core/lib/browser";
-import { EditorWidget } from "./editor-widget";
+import { EditorBasedSplitPanel, EditorWidget } from "./editor-widget";
 import { Range, Position } from "./editor";
 import { EditorWidgetFactory } from "./editor-widget-factory";
 
@@ -69,7 +69,13 @@ export class EditorManager extends WidgetOpenHandler<EditorWidget> {
     }
     protected updateActiveEditor(): void {
         const widget = this.shell.activeWidget;
-        this.setActiveEditor(widget instanceof EditorWidget ? widget : undefined);
+        if (widget instanceof EditorWidget) {
+            this.setActiveEditor(widget);
+        } else if (widget instanceof EditorBasedSplitPanel) {
+            this.setActiveEditor(widget.getEditor());
+        } else {
+            this.setActiveEditor(undefined);
+        }
     }
 
     protected _currentEditor: EditorWidget | undefined;
@@ -90,6 +96,8 @@ export class EditorManager extends WidgetOpenHandler<EditorWidget> {
         const widget = this.shell.currentWidget;
         if (widget instanceof EditorWidget) {
             this.setCurrentEditor(widget);
+        } else if (widget instanceof EditorBasedSplitPanel) {
+            this.setCurrentEditor(widget.getEditor());
         } else if (!this._currentEditor || !this._currentEditor.isVisible) {
             this.setCurrentEditor(undefined);
         }
