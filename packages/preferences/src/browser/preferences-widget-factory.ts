@@ -22,17 +22,22 @@ import {
     ApplicationShell,
     PreferenceProvider,
     PreferenceScope,
+    PreferenceService,
     WidgetFactory,
     WidgetManager
 } from "@theia/core/lib/browser";
 import { UserPreferenceProvider } from "./user-preference-provider";
 import { WorkspacePreferenceProvider } from "./workspace-preference-provider";
 import { PreferencesContainer } from "./preferences-tree-widget";
+import { MessageService } from "@theia/core";
 
 @injectable()
 export class PreferencesWidgetFactory implements WidgetFactory {
 
     readonly id = PREFERENCES_CONTAINER_WIDGET_ID;
+
+    @inject(PreferenceService) protected readonly preferenceService: PreferenceService;
+    @inject(MessageService) protected readonly messageService: MessageService;
 
     constructor(@inject(WidgetManager) protected readonly widgetManager: WidgetManager,
                 @inject(ApplicationShell) protected readonly shell: ApplicationShell,
@@ -41,6 +46,11 @@ export class PreferencesWidgetFactory implements WidgetFactory {
     }
 
     async createWidget(): Promise<PreferencesContainer> {
-        return new PreferencesContainer(this.widgetManager, this.shell, this.userPreferenceProvider, this.workspacePreferenceProvider);
+        return new PreferencesContainer(this.widgetManager,
+            this.shell,
+            this.preferenceService,
+            this.messageService,
+            this.userPreferenceProvider,
+            this.workspacePreferenceProvider);
     }
 }

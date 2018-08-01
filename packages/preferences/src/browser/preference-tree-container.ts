@@ -14,13 +14,13 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { interfaces, Container } from 'inversify';
+import { interfaces } from 'inversify';
 import { PreferencesDecorator } from "./preferences-decorator";
 import { PreferencesDecoratorService } from "./preferences-decorator-service";
 import { createTreeContainer, TreeDecoratorService, TreeWidget} from "@theia/core/lib/browser";
 import { PreferencesTreeWidget } from "./preferences-tree-widget";
 
-function createUserPreferencesTreeContainer(parent: interfaces.Container): Container {
+export function createPreferencesTreeWidget(parent: interfaces.Container): PreferencesTreeWidget {
     const child = createTreeContainer(parent);
 
     child.bind(PreferencesTreeWidget).toSelf();
@@ -28,11 +28,7 @@ function createUserPreferencesTreeContainer(parent: interfaces.Container): Conta
 
     bindPreferencesDecorator(child);
 
-    return child;
-}
-
-export function createPreferencesTreeWidget(parent: interfaces.Container): PreferencesTreeWidget {
-    return createUserPreferencesTreeContainer(parent).get(PreferencesTreeWidget);
+    return child.get(PreferencesTreeWidget);
 }
 
 function bindPreferencesDecorator(parent: interfaces.Container): void {

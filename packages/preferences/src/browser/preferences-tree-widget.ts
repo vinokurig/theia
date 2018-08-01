@@ -21,20 +21,20 @@ import { PreferencesDecorator } from "./preferences-decorator";
 import { toArray } from '@phosphor/algorithm';
 import { DockPanel } from "@phosphor/widgets";
 import {
+    ApplicationShell,
     ContextMenuRenderer,
     ExpandableTreeNode,
-    PreferenceSchemaProvider,
-    SelectableTreeNode,
     PreferenceProperty,
+    PreferenceSchemaProvider,
     PreferenceScope,
     PreferenceService,
+    Saveable,
+    SelectableTreeNode,
     TreeModel,
     TreeNode,
     TreeProps,
     TreeWidget,
-    WidgetManager,
-    Saveable,
-    ApplicationShell
+    WidgetManager
 } from "@theia/core/lib/browser";
 import { UserPreferenceProvider } from "./user-preference-provider";
 import { WorkspacePreferenceProvider } from "./workspace-preference-provider";
@@ -42,25 +42,26 @@ import { EditorBasedSplitPanel, EditorWidget } from "@theia/editor/lib/browser";
 import { DisposableCollection, Emitter, Event, MaybePromise, MessageService } from '@theia/core';
 import { PREFERENCES_CONTAINER_WIDGET_ID, PREFERENCES_TREE_WIDGET_ID } from "./preferences-contribution";
 
-let dirty = false;
-let currentEditor: EditorWidget;
-let preferencesScope: PreferenceScope;
-const onDirtyChangedEmitter = new Emitter<void>();
-
 export class PreferencesContainer extends EditorBasedSplitPanel implements Saveable {
 
     protected treeWidget: TreeWidget;
+    private currentEditor: EditorWidget;
+    private editors: EditorWidget[];
 
     get dirty(): boolean {
-        return dirty;
+        return this.editors.some(editor => editor.saveable.dirty);
     }
     autoSave: "on" | "off";
-    save: () => MaybePromise<void>;
-    onDirtyChanged: Event<void>;
+    readonly onDirtyChangedEmitter: Emitter<void>;
+    readonly onDirtyChanged: Event<void>;
+    readonly save: () => MaybePromise<void>;
+
     protected readonly toDispose = new DisposableCollection();
 
     constructor(protected readonly widgetManager: WidgetManager,
                 protected readonly shell: ApplicationShell,
+                protected readonly preferenceService: PreferenceService,
+                protected readonly messageService: MessageService,
                 protected readonly userPreferenceProvider: UserPreferenceProvider,
                 protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider) {
         super();
@@ -70,11 +71,15 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
         this.title.closable = true;
         this.title.iconClass = 'fa fa-sliders';
 
-        this.onDirtyChanged = onDirtyChangedEmitter.event;
+        this.editors = [];
+
+        this.onDirtyChangedEmitter = new Emitter<void>();
+        this.onDirtyChanged = this.onDirtyChangedEmitter.event;
         this.save = () => {
-            toArray((<DockPanel>this.widgets.find(widget => widget instanceof DockPanel)).widgets())
-                .forEach(widget => (<EditorWidget>widget).saveable.save());
+            this.editors.forEach(editor => editor.saveable.save());
         };
+
+        this.toDispose.push(this.onDirtyChangedEmitter);
     }
 
     dispose(): void {
@@ -86,12 +91,48 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
     }
 
     getEditor(): EditorWidget {
-        return currentEditor;
+        return this.currentEditor;
     }
 
     protected async onAfterAttach(msg: Message) {
         this.treeWidget = await this.widgetManager.getOrCreateWidget(PREFERENCES_TREE_WIDGET_ID) as TreeWidget;
-        const editorsContainer = new PreferencesEditorsContainer(this.widgetManager, this.shell, this.userPreferenceProvider, this.workspacePreferenceProvider);
+        (this.treeWidget as PreferencesTreeWidget).onPreferenceSelected(value => {
+            const preferenceName = Object.keys(value)[0];
+            const preferenceValue = value[preferenceName];
+            if (this.dirty) {
+                this.messageService.warn('Preferences editor(s) has/have unsaved changes');
+            } else {
+                this.preferenceService.set(preferenceName,
+                    preferenceValue,
+                    this.currentEditor.title.label === 'User Preferences'
+                        ? PreferenceScope.User
+                        : PreferenceScope.Workspace);
+            }
+        });
+
+        const editorsContainer = new PreferencesEditorsContainer(this.widgetManager, this.userPreferenceProvider, this.workspacePreferenceProvider);
+        editorsContainer.onInit(() => {
+            toArray(editorsContainer.widgets()).forEach(editor => {
+                const editorWidget = editor as EditorWidget;
+                this.editors.push(editorWidget);
+                const savable = editorWidget.saveable;
+                savable.onDirtyChanged(() => {
+                    this.onDirtyChangedEmitter.fire(undefined);
+                });
+            });
+        });
+        editorsContainer.onEditorChanged(editor => {
+            if (this.currentEditor) {
+                this.currentEditor.saveable.save();
+            }
+            this.currentEditor = editor;
+            const currentWidget = this.shell.currentWidget;
+            this.shell.currentChanged.emit({
+                oldValue: currentWidget ? currentWidget : null,
+                newValue: this.currentEditor
+            });
+        });
+
         this.addWidget(this.treeWidget);
         this.addWidget(editorsContainer);
         this.treeWidget.activate();
@@ -103,8 +144,7 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
         super.onActivateRequest(msg);
     }
 
-    onCloseRequest(msg: Message) {
-        dirty = false;
+    protected onCloseRequest(msg: Message) {
         this.widgets.forEach(widget => widget.close());
         super.onCloseRequest(msg);
         this.dispose();
@@ -113,14 +153,31 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
 
 export class PreferencesEditorsContainer extends DockPanel {
 
-    private userUri: string;
-    private wsUri: string;
+    private readonly onInitEmitter: Emitter<void>;
+    private readonly onEditorChangedEmitter: Emitter<EditorWidget>;
+
+    readonly onInit: Event<void>;
+    readonly onEditorChanged: Event<EditorWidget>;
+
+    protected readonly toDispose: DisposableCollection;
 
     constructor(protected readonly widgetManager: WidgetManager,
-                protected readonly shell: ApplicationShell,
                 protected readonly userPreferenceProvider: UserPreferenceProvider,
                 protected readonly workspacePreferenceProvider: WorkspacePreferenceProvider) {
         super();
+
+        this.onInitEmitter = new Emitter<void>();
+        this.onEditorChangedEmitter = new Emitter<EditorWidget>();
+        this.onInit = this.onInitEmitter.event;
+        this.onEditorChanged = this.onEditorChangedEmitter.event;
+
+        this.toDispose = new DisposableCollection();
+        this.toDispose.push(this.onEditorChangedEmitter);
+        this.toDispose.push(this.onInitEmitter);
+    }
+
+    dispose(): void {
+        this.toDispose.dispose();
     }
 
     onCloseRequest(msg: Message) {
@@ -129,49 +186,28 @@ export class PreferencesEditorsContainer extends DockPanel {
     }
 
     onUpdateRequest(msg: Message) {
-        currentEditor = this.selectedWidgets().next() as EditorWidget;
-        if (currentEditor && currentEditor.id.endsWith(this.userUri)) {
-            preferencesScope = PreferenceScope.User;
-        } else if (currentEditor && currentEditor.id.endsWith(this.wsUri)) {
-            preferencesScope = PreferenceScope.Workspace;
-        }
-
-        const currentWidget = this.shell.currentWidget;
-        this.shell.currentChanged.emit({
-            oldValue: currentWidget ? currentWidget : null,
-            newValue: currentEditor
-        });
+        this.onEditorChangedEmitter.fire(this.selectedWidgets().next() as EditorWidget);
 
         super.onUpdateRequest(msg);
     }
 
     protected async onAfterAttach(msg: Message): Promise<void> {
-        this.userUri = this.userPreferenceProvider.getUri().withoutFragment().toString();
-        const wsUri = await this.workspacePreferenceProvider.getUri();
-        if (wsUri) {
-            this.wsUri = wsUri.toString();
-        }
-
         const userPreferences = await await this.widgetManager.getOrCreateWidget(
             "code-editor-opener",
-            this.userUri
+            this.userPreferenceProvider.getUri().withoutFragment().toString()
         ) as EditorWidget;
         userPreferences.title.label = 'User Preferences';
-        userPreferences.saveable.onDirtyChanged(() => {
-            dirty = userPreferences.saveable.dirty;
-            onDirtyChangedEmitter.fire(undefined);
-        });
         this.addWidget(userPreferences);
 
-        const workspacePreferences = await this.widgetManager.getOrCreateWidget("code-editor-opener", wsUri) as EditorWidget;
+        const workspacePreferences = await this.widgetManager.getOrCreateWidget(
+            "code-editor-opener",
+            await this.workspacePreferenceProvider.getUri()
+        ) as EditorWidget;
         workspacePreferences.title.label = 'Workspace Preferences';
-        workspacePreferences.saveable.onDirtyChanged(() => {
-            dirty = workspacePreferences.saveable.dirty;
-            onDirtyChangedEmitter.fire(undefined);
-        });
         this.addWidget(workspacePreferences);
 
         super.onAfterAttach(msg);
+        this.onInitEmitter.fire(undefined);
     }
 }
 
@@ -179,17 +215,25 @@ export class PreferencesTreeWidget extends TreeWidget {
 
     private preferencesGroupNames: string[] = [];
     private readonly properties: { [name: string]: PreferenceProperty };
+    private readonly onPreferenceSelectedEmitter: Emitter<{[key: string]: string}>;
+    readonly onPreferenceSelected: Event<{[key: string]: string}>;
+
+    protected readonly toDispose: DisposableCollection;
 
     @inject(PreferencesMenuFactory) protected readonly preferencesMenuFactory: PreferencesMenuFactory;
     @inject(PreferenceService) protected readonly preferenceService: PreferenceService;
     @inject(PreferencesDecorator) protected readonly decorator: PreferencesDecorator;
-    @inject(MessageService) protected readonly messageService: MessageService;
 
     protected constructor(@inject(TreeModel) readonly model: TreeModel,
                           @inject(TreeProps) protected readonly treeProps: TreeProps,
                           @inject(ContextMenuRenderer) protected readonly contextMenuRenderer: ContextMenuRenderer,
                           @inject(PreferenceSchemaProvider) protected readonly preferenceSchemaProvider: PreferenceSchemaProvider) {
         super(treeProps, model, contextMenuRenderer);
+
+        this.onPreferenceSelectedEmitter = new Emitter<{[key: string]: string}>();
+        this.onPreferenceSelected = this.onPreferenceSelectedEmitter.event;
+        this.toDispose = new DisposableCollection();
+        this.toDispose.push(this.onPreferenceSelectedEmitter);
 
         this.id = PREFERENCES_TREE_WIDGET_ID;
 
@@ -202,6 +246,10 @@ export class PreferencesTreeWidget extends TreeWidget {
                 }
             }
         }
+    }
+
+    dispose(): void {
+        this.toDispose.dispose();
     }
 
     protected onAfterAttach(msg: Message): void {
@@ -244,11 +292,7 @@ export class PreferencesTreeWidget extends TreeWidget {
                 this.preferenceService.get(node.id),
                 this.properties[node.id],
                 (property, value) => {
-                    if (dirty) {
-                        this.messageService.warn('Preferences editor(s) has/have unsaved changes');
-                    } else {
-                        this.preferenceService.set(property, value, preferencesScope);
-                    }
+                    this.onPreferenceSelectedEmitter.fire({[property]: value});
                 }
             );
             contextMenu.aboutToClose.connect(() => {
