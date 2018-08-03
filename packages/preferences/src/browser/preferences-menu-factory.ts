@@ -14,10 +14,10 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable } from "inversify";
-import { Menu } from "@phosphor/widgets";
-import { CommandRegistry } from "@phosphor/commands";
-import { PreferenceProperty } from "@theia/core/lib/browser";
+import { injectable } from 'inversify';
+import { Menu } from '@phosphor/widgets';
+import { CommandRegistry } from '@phosphor/commands';
+import { PreferenceProperty } from '@theia/core/lib/browser';
 
 @injectable()
 export class PreferencesMenuFactory {

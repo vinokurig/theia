@@ -81,7 +81,7 @@ export function createAPI(rpc: RPCProtocol): typeof theia {
         },
         // tslint:disable-next-line:no-any
         registerTextEditorCommand(command: theia.Command, callback: (textEditor: theia.TextEditor, edit: theia.TextEditorEdit, ...arg: any[]) => void): Disposable {
-            throw new Error("Function registerTextEditorCommand is not implemented");
+            throw new Error('Function registerTextEditorCommand is not implemented');
         },
         // tslint:disable-next-line:no-any
         registerHandler(commandId: string, handler: (...args: any[]) => any): Disposable {
@@ -141,6 +141,9 @@ export function createAPI(rpc: RPCProtocol): typeof theia {
             // tslint:disable-next-line:no-any
             ...items: any[]): PromiseLike<any> {
             return messageRegistryExt.showErrorMessage(message, optionsOrFirstItem, items);
+        },
+        showOpenDialog(options: theia.OpenDialogOptions): PromiseLike<Uri[] | undefined> {
+            return quickOpenExt.showOpenDialog(options);
         },
         // tslint:disable-next-line:no-any
         setStatusBarMessage(text: string, arg?: number | PromiseLike<any>): Disposable {
@@ -292,5 +295,5 @@ export function startPlugin(plugin: Plugin, pluginMain: any, plugins: Map<string
 // for electron
 function getGlobal() {
     // tslint:disable-next-line:no-null-keyword
-    return typeof self === "undefined" ? typeof global === "undefined" ? null : global : self;
+    return typeof self === 'undefined' ? typeof global === 'undefined' ? null : global : self;
 }

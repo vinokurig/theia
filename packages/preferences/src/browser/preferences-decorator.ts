@@ -14,9 +14,9 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { inject, injectable } from "inversify";
-import { Tree, TreeDecorator, TreeDecoration, PreferenceProperty, PreferenceService } from "@theia/core/lib/browser";
-import { Emitter, Event, MaybePromise } from "@theia/core";
+import { inject, injectable } from 'inversify';
+import { Tree, TreeDecorator, TreeDecoration, PreferenceProperty, PreferenceService } from '@theia/core/lib/browser';
+import { Emitter, Event, MaybePromise } from '@theia/core';
 
 @injectable()
 export class PreferencesDecorator implements TreeDecorator {

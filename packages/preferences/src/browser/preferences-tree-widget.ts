@@ -14,12 +14,12 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { inject } from "inversify";
-import { Message } from "@phosphor/messaging";
-import { PreferencesMenuFactory } from "./preferences-menu-factory";
-import { PreferencesDecorator } from "./preferences-decorator";
+import { inject } from 'inversify';
+import { Message } from '@phosphor/messaging';
+import { PreferencesMenuFactory } from './preferences-menu-factory';
+import { PreferencesDecorator } from './preferences-decorator';
 import { toArray } from '@phosphor/algorithm';
-import { DockPanel } from "@phosphor/widgets";
+import { DockPanel } from '@phosphor/widgets';
 import {
     ApplicationShell,
     ContextMenuRenderer,
@@ -35,12 +35,12 @@ import {
     TreeProps,
     TreeWidget,
     WidgetManager
-} from "@theia/core/lib/browser";
-import { UserPreferenceProvider } from "./user-preference-provider";
-import { WorkspacePreferenceProvider } from "./workspace-preference-provider";
-import { EditorBasedSplitPanel, EditorWidget } from "@theia/editor/lib/browser";
+} from '@theia/core/lib/browser';
+import { UserPreferenceProvider } from './user-preference-provider';
+import { WorkspacePreferenceProvider } from './workspace-preference-provider';
+import { EditorBasedSplitPanel, EditorWidget } from '@theia/editor/lib/browser';
 import { DisposableCollection, Emitter, Event, MaybePromise, MessageService } from '@theia/core';
-import { PREFERENCES_CONTAINER_WIDGET_ID, PREFERENCES_TREE_WIDGET_ID } from "./preferences-contribution";
+import { PREFERENCES_CONTAINER_WIDGET_ID, PREFERENCES_TREE_WIDGET_ID } from './preferences-contribution';
 
 export class PreferencesContainer extends EditorBasedSplitPanel implements Saveable {
 
@@ -51,7 +51,7 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
     get dirty(): boolean {
         return this.editors.some(editor => editor.saveable.dirty);
     }
-    autoSave: "on" | "off";
+    autoSave: 'on' | 'off';
     readonly onDirtyChangedEmitter: Emitter<void>;
     readonly onDirtyChanged: Event<void>;
     readonly save: () => MaybePromise<void>;
@@ -67,7 +67,7 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
         super();
 
         this.id = PREFERENCES_CONTAINER_WIDGET_ID;
-        this.title.label = "Preferences";
+        this.title.label = 'Preferences';
         this.title.closable = true;
         this.title.iconClass = 'fa fa-sliders';
 
@@ -128,6 +128,7 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
             this.currentEditor = editor;
             const currentWidget = this.shell.currentWidget;
             this.shell.currentChanged.emit({
+                // tslint:disable-next-line:no-null-keyword
                 oldValue: currentWidget ? currentWidget : null,
                 newValue: this.currentEditor
             });
@@ -193,14 +194,14 @@ export class PreferencesEditorsContainer extends DockPanel {
 
     protected async onAfterAttach(msg: Message): Promise<void> {
         const userPreferences = await await this.widgetManager.getOrCreateWidget(
-            "code-editor-opener",
+            'code-editor-opener',
             this.userPreferenceProvider.getUri().withoutFragment().toString()
         ) as EditorWidget;
         userPreferences.title.label = 'User Preferences';
         this.addWidget(userPreferences);
 
         const workspacePreferences = await this.widgetManager.getOrCreateWidget(
-            "code-editor-opener",
+            'code-editor-opener',
             await this.workspacePreferenceProvider.getUri()
         ) as EditorWidget;
         workspacePreferences.title.label = 'Workspace Preferences';

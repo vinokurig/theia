@@ -33,9 +33,9 @@ import { HostedPluginLogViewer } from '../../hosted/browser/hosted-plugin-log-vi
 @injectable()
 export class HostedPluginController implements FrontendApplicationContribution {
 
-    public static readonly HOSTED_PLUGIN = "hosted-plugin";
-    public static readonly HOSTED_PLUGIN_OFFLINE = "hosted-plugin-offline";
-    public static readonly HOSTED_PLUGIN_FAILED = "hosted-plugin-failed";
+    public static readonly HOSTED_PLUGIN = 'hosted-plugin';
+    public static readonly HOSTED_PLUGIN_OFFLINE = 'hosted-plugin-offline';
+    public static readonly HOSTED_PLUGIN_FAILED = 'hosted-plugin-failed';
 
     @inject(StatusBar)
     protected readonly statusBar: StatusBar;
@@ -64,14 +64,19 @@ export class HostedPluginController implements FrontendApplicationContribution {
             if (!pluginMetadata) {
                 this.frontendApplicationStateService.reachedState('ready').then(() => {
                     this.hostedPluginManagerClient.onStateChanged(e => {
-                        if (e === 'starting') {
-                            this.onHostedPluginStarting();
-                        } else if (e === 'running') {
-                            this.onHostedPluginRunning();
-                        } else if (e === 'stopped') {
-                            this.onHostedPluginStopped();
-                        } else if (e === 'failed') {
-                            this.onHostedPluginFailed();
+                        switch (e) {
+                            case HostedPluginState.Starting:
+                                this.onHostedPluginStarting();
+                                break;
+                            case HostedPluginState.Running:
+                                this.onHostedPluginRunning();
+                                break;
+                            case HostedPluginState.Stopped:
+                                this.onHostedPluginStopped();
+                                break;
+                            case HostedPluginState.Failed:
+                                this.onHostedPluginFailed();
+                                break;
                         }
                     });
 
@@ -94,7 +99,7 @@ export class HostedPluginController implements FrontendApplicationContribution {
         this.pluginState = HostedPluginState.Stopped;
 
         this.entry = {
-            text: `Hosted Plugin: Stopped $(angle-up)`,
+            text: 'Hosted Plugin: Stopped $(angle-up)',
             alignment: StatusBarAlignment.LEFT,
             priority: 100,
             onclick: e => {
@@ -115,7 +120,7 @@ export class HostedPluginController implements FrontendApplicationContribution {
         this.hostedPluginLogViewer.showLogConsole();
 
         this.entry = {
-            text: `$(cog~spin) Hosted Plugin: Starting`,
+            text: '$(cog~spin) Hosted Plugin: Starting',
             alignment: StatusBarAlignment.LEFT,
             priority: 100
         };
@@ -131,7 +136,7 @@ export class HostedPluginController implements FrontendApplicationContribution {
         this.pluginState = HostedPluginState.Running;
 
         this.entry = {
-            text: `$(cog~spin) Hosted Plugin: Running $(angle-up)`,
+            text: '$(cog~spin) Hosted Plugin: Running $(angle-up)',
             alignment: StatusBarAlignment.LEFT,
             priority: 100,
             onclick: e => {
@@ -150,7 +155,7 @@ export class HostedPluginController implements FrontendApplicationContribution {
         this.pluginState = HostedPluginState.Failed;
 
         this.entry = {
-            text: `Hosted Plugin: Stopped $(angle-up)`,
+            text: 'Hosted Plugin: Stopped $(angle-up)',
             alignment: StatusBarAlignment.LEFT,
             priority: 100,
             onclick: e => {
@@ -170,7 +175,7 @@ export class HostedPluginController implements FrontendApplicationContribution {
             // Re-set the element only if it's visible on status bar
             if (this.entry) {
                 const offlineElement = {
-                    text: `Hosted Plugin: Stopped`,
+                    text: 'Hosted Plugin: Stopped',
                     alignment: StatusBarAlignment.LEFT,
                     priority: 100
                 };
@@ -242,7 +247,7 @@ export class HostedPluginController implements FrontendApplicationContribution {
      */
     protected addCommandsForStoppedPlugin(commands: CommandRegistry, menu: Menu): void {
         commands.addCommand(HostedPluginCommands.START.id, {
-            label: "Start Instance",
+            label: 'Start Instance',
             icon: 'fa fa-play',
             execute: () => setTimeout(() => this.hostedPluginManagerClient.start(), 100)
         });

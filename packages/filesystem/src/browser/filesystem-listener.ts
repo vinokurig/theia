@@ -14,9 +14,9 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable } from "inversify";
-import { ConfirmDialog } from "@theia/core/lib/browser";
-import { FileStat, FileSystemClient, FileSystem } from "../common";
+import { injectable } from 'inversify';
+import { ConfirmDialog } from '@theia/core/lib/browser';
+import { FileStat, FileSystemClient, FileSystem } from '../common';
 
 @injectable()
 export class FileSystemListener implements FileSystemClient {
@@ -34,7 +34,7 @@ export class FileSystemListener implements FileSystemClient {
             ok: 'Yes',
             cancel: 'No'
         });
-        return await dialog.open() ? true : false;
+        return !!await dialog.open();
     }
 
 }

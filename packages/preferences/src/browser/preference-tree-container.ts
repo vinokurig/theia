@@ -15,10 +15,10 @@
  ********************************************************************************/
 
 import { interfaces } from 'inversify';
-import { PreferencesDecorator } from "./preferences-decorator";
-import { PreferencesDecoratorService } from "./preferences-decorator-service";
-import { createTreeContainer, TreeDecoratorService, TreeWidget} from "@theia/core/lib/browser";
-import { PreferencesTreeWidget } from "./preferences-tree-widget";
+import { PreferencesDecorator } from './preferences-decorator';
+import { PreferencesDecoratorService } from './preferences-decorator-service';
+import { createTreeContainer, TreeDecoratorService, TreeWidget} from '@theia/core/lib/browser';
+import { PreferencesTreeWidget } from './preferences-tree-widget';
 
 export function createPreferencesTreeWidget(parent: interfaces.Container): PreferencesTreeWidget {
     const child = createTreeContainer(parent);

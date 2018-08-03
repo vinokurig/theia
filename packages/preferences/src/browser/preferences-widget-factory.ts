@@ -14,10 +14,10 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { inject, injectable, named } from "inversify";
+import { inject, injectable, named } from 'inversify';
 import {
     PREFERENCES_CONTAINER_WIDGET_ID
-} from "./preferences-contribution";
+} from './preferences-contribution';
 import {
     ApplicationShell,
     PreferenceProvider,
@@ -25,11 +25,11 @@ import {
     PreferenceService,
     WidgetFactory,
     WidgetManager
-} from "@theia/core/lib/browser";
-import { UserPreferenceProvider } from "./user-preference-provider";
-import { WorkspacePreferenceProvider } from "./workspace-preference-provider";
-import { PreferencesContainer } from "./preferences-tree-widget";
-import { MessageService } from "@theia/core";
+} from '@theia/core/lib/browser';
+import { UserPreferenceProvider } from './user-preference-provider';
+import { WorkspacePreferenceProvider } from './workspace-preference-provider';
+import { PreferencesContainer } from './preferences-tree-widget';
+import { MessageService } from '@theia/core';
 
 @injectable()
 export class PreferencesWidgetFactory implements WidgetFactory {

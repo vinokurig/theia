@@ -14,19 +14,19 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, inject, named } from "inversify";
-import { Command, MenuModelRegistry, CommandRegistry } from "@theia/core";
-import { UserPreferenceProvider } from "./user-preference-provider";
+import { injectable, inject, named } from 'inversify';
+import { Command, MenuModelRegistry, CommandRegistry } from '@theia/core';
+import { UserPreferenceProvider } from './user-preference-provider';
 import {
     CommonMenus,
     PreferenceScope,
     PreferenceProvider,
     AbstractViewContribution
-} from "@theia/core/lib/browser";
+} from '@theia/core/lib/browser';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
-import { FileSystem } from "@theia/filesystem/lib/common";
-import { UserStorageService } from "@theia/userstorage/lib/browser";
-import { PreferencesContainer } from "./preferences-tree-widget";
+import { FileSystem } from '@theia/filesystem/lib/common';
+import { UserStorageService } from '@theia/userstorage/lib/browser';
+import { PreferencesContainer } from './preferences-tree-widget';
 
 export const PREFERENCES_COMMAND: Command = {
     id: 'preferences:open',
@@ -68,7 +68,7 @@ export class PreferencesContribution extends AbstractViewContribution<Preference
     protected async openPreferences(): Promise<void> {
         const userUri = this.userPreferenceProvider.getUri();
         const content = await this.userStorageService.readContents(userUri);
-        if (content === "") {
+        if (content === '') {
             await this.userStorageService.saveContents(userUri, this.getPreferenceTemplateForScope('user'));
         }
 

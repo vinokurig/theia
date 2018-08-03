@@ -15,17 +15,17 @@
  ********************************************************************************/
 
 import { ContainerModule, interfaces, } from 'inversify';
-import { PreferenceProvider, PreferenceScope } from "@theia/core/lib/browser/preferences";
+import { PreferenceProvider, PreferenceScope } from '@theia/core/lib/browser/preferences';
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
-import { bindViewContribution, WidgetFactory } from "@theia/core/lib/browser";
+import { bindViewContribution, WidgetFactory } from '@theia/core/lib/browser';
 import {
     PreferencesContribution,
     PREFERENCES_TREE_WIDGET_ID
-} from "./preferences-contribution";
-import { createPreferencesTreeWidget } from "./preference-tree-container";
-import { PreferencesMenuFactory } from "./preferences-menu-factory";
-import { PreferencesWidgetFactory } from "./preferences-widget-factory";
+} from './preferences-contribution';
+import { createPreferencesTreeWidget } from './preference-tree-container';
+import { PreferencesMenuFactory } from './preferences-menu-factory';
+import { PreferencesWidgetFactory } from './preferences-widget-factory';
 
 export function bindPreferences(bind: interfaces.Bind, unbind: interfaces.Unbind): void {
     unbind(PreferenceProvider);

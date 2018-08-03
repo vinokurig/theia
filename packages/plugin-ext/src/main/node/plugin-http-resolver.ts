@@ -14,14 +14,14 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable } from "inversify";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
-import * as url from "url";
-import * as request from "request";
+import { injectable } from 'inversify';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as url from 'url';
+import * as request from 'request';
 
-import { PluginDeployerResolver, PluginDeployerResolverContext } from "../../common";
+import { PluginDeployerResolver, PluginDeployerResolverContext } from '../../common';
 
 /**
  * Resolver that handle the http(s): protocol
@@ -75,7 +75,7 @@ export class HttpPluginDeployerResolver implements PluginDeployerResolver {
 
             dest.addListener('finish', finish);
             request.get(pluginResolverContext.getOriginId())
-                .on('error', (err) => {
+                .on('error', err => {
                     reject(err);
                 }).pipe(dest);
         });
