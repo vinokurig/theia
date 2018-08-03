@@ -18,10 +18,14 @@ import { SelectionService } from '@theia/core/lib/common';
 import { Widget, BaseWidget, Message, Saveable, SaveableSource, Navigatable } from '@theia/core/lib/browser';
 import URI from '@theia/core/lib/common/uri';
 import { TextEditor } from './editor';
-import { SplitPanel } from '@phosphor/widgets';
 
-export abstract class EditorBasedSplitPanel extends SplitPanel {
-    abstract getEditor(): EditorWidget;
+export interface EditorWidgetProvider {
+    getEditorWidget(): EditorWidget;
+}
+export namespace EditorWidgetProvider {
+    export function is(provider: object | undefined): provider is EditorWidgetProvider {
+        return !!provider && 'getEditorWidget' in provider;
+    }
 }
 
 export class EditorWidget extends BaseWidget implements SaveableSource, Navigatable {

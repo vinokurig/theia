@@ -19,7 +19,7 @@ import { Message } from '@phosphor/messaging';
 import { PreferencesMenuFactory } from './preferences-menu-factory';
 import { PreferencesDecorator } from './preferences-decorator';
 import { toArray } from '@phosphor/algorithm';
-import { DockPanel } from '@phosphor/widgets';
+import { DockPanel, SplitPanel } from '@phosphor/widgets';
 import {
     ApplicationShell,
     ContextMenuRenderer,
@@ -38,11 +38,11 @@ import {
 } from '@theia/core/lib/browser';
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
-import { EditorBasedSplitPanel, EditorWidget } from '@theia/editor/lib/browser';
+import { EditorWidgetProvider, EditorWidget } from '@theia/editor/lib/browser';
 import { DisposableCollection, Emitter, Event, MaybePromise, MessageService } from '@theia/core';
 import { PREFERENCES_CONTAINER_WIDGET_ID, PREFERENCES_TREE_WIDGET_ID } from './preferences-contribution';
 
-export class PreferencesContainer extends EditorBasedSplitPanel implements Saveable {
+export class PreferencesContainer extends SplitPanel implements EditorWidgetProvider, Saveable {
 
     protected treeWidget: TreeWidget;
     private currentEditor: EditorWidget;
@@ -90,7 +90,7 @@ export class PreferencesContainer extends EditorBasedSplitPanel implements Savea
         this.toDispose.dispose();
     }
 
-    getEditor(): EditorWidget {
+    getEditorWidget(): EditorWidget {
         return this.currentEditor;
     }
 
