@@ -19,7 +19,7 @@ import { Message } from '@phosphor/messaging';
 import { PreferencesMenuFactory } from './preferences-menu-factory';
 import { PreferencesDecorator } from './preferences-decorator';
 import { toArray } from '@phosphor/algorithm';
-import { DockPanel, SplitPanel } from '@phosphor/widgets';
+import { DockPanel, SplitPanel, Widget } from '@phosphor/widgets';
 import {
     ApplicationShell,
     ContextMenuRenderer,
@@ -38,15 +38,17 @@ import {
 } from '@theia/core/lib/browser';
 import { UserPreferenceProvider } from './user-preference-provider';
 import { WorkspacePreferenceProvider } from './workspace-preference-provider';
-import { EditorWidgetProvider, EditorWidget } from '@theia/editor/lib/browser';
+import { EditorWidget } from '@theia/editor/lib/browser';
 import { DisposableCollection, Emitter, Event, MaybePromise, MessageService } from '@theia/core';
 import { PREFERENCES_CONTAINER_WIDGET_ID, PREFERENCES_TREE_WIDGET_ID } from './preferences-contribution';
+import { Deferred } from '@theia/core/lib/common/promise-util';
 
-export class PreferencesContainer extends SplitPanel implements EditorWidgetProvider, Saveable {
+export class PreferencesContainer extends SplitPanel implements ApplicationShell.TrackableWidgetProvider, Saveable {
 
     protected treeWidget: TreeWidget;
     private currentEditor: EditorWidget;
     private editors: EditorWidget[];
+    private deferredEditors = new Deferred<EditorWidget[]>();
 
     get dirty(): boolean {
         return this.editors.some(editor => editor.saveable.dirty);
@@ -90,8 +92,8 @@ export class PreferencesContainer extends SplitPanel implements EditorWidgetProv
         this.toDispose.dispose();
     }
 
-    getEditorWidget(): EditorWidget {
-        return this.currentEditor;
+    getTrackableWidgets(): Promise<Widget[]> {
+        return this.deferredEditors.promise;
     }
 
     protected async onAfterAttach(msg: Message) {
@@ -120,18 +122,13 @@ export class PreferencesContainer extends SplitPanel implements EditorWidgetProv
                     this.onDirtyChangedEmitter.fire(undefined);
                 });
             });
+            this.deferredEditors.resolve(this.editors);
         });
         editorsContainer.onEditorChanged(editor => {
             if (this.currentEditor) {
                 this.currentEditor.saveable.save();
             }
             this.currentEditor = editor;
-            const currentWidget = this.shell.currentWidget;
-            this.shell.currentChanged.emit({
-                // tslint:disable-next-line:no-null-keyword
-                oldValue: currentWidget ? currentWidget : null,
-                newValue: this.currentEditor
-            });
         });
 
         this.addWidget(this.treeWidget);

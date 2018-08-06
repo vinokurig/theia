@@ -19,15 +19,6 @@ import { Widget, BaseWidget, Message, Saveable, SaveableSource, Navigatable } fr
 import URI from '@theia/core/lib/common/uri';
 import { TextEditor } from './editor';
 
-export interface EditorWidgetProvider {
-    getEditorWidget(): EditorWidget;
-}
-export namespace EditorWidgetProvider {
-    export function is(provider: object | undefined): provider is EditorWidgetProvider {
-        return !!provider && 'getEditorWidget' in provider;
-    }
-}
-
 export class EditorWidget extends BaseWidget implements SaveableSource, Navigatable {
 
     constructor(
