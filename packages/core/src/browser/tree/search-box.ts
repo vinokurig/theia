@@ -15,8 +15,9 @@
  ********************************************************************************/
 
 import {SearchBoxDebounce, SearchBoxDebounceOptions} from '../tree/search-box-debounce';
-import {BaseWidget, Key, KeyCode} from '../';
+import {BaseWidget, KeyCode} from '../';
 import {Emitter, Event} from '../../common';
+import {Key} from '../';
 
 /**
  * Initializer properties for the search box widget.
@@ -44,10 +45,7 @@ export namespace SearchBoxProps {
  */
 export class SearchBox extends BaseWidget {
 
-    private static SPECIAL_KEYS = [
-        Key.ESCAPE,
-        Key.BACKSPACE
-    ];
+    private static SPECIAL_KEYS: Key[];
 
     protected readonly nextEmitter = new Emitter<void>();
     protected readonly previousEmitter = new Emitter<void>();
@@ -59,6 +57,7 @@ export class SearchBox extends BaseWidget {
         protected readonly debounce: SearchBoxDebounce) {
 
         super();
+
         this.toDispose.pushAll([
             this.nextEmitter,
             this.previousEmitter,
@@ -67,6 +66,10 @@ export class SearchBox extends BaseWidget {
             this.debounce,
             this.debounce.onChanged(data => this.fireTextChange(data))
         ]);
+        SearchBox.SPECIAL_KEYS = [
+            Key.ESCAPE,
+            Key.BACKSPACE
+        ];
         this.hide();
         this.update();
         const { input } = this.createContent();

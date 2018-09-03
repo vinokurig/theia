@@ -99,18 +99,19 @@ export namespace TreeWidget {
 @injectable()
 export class TreeWidget extends ReactWidget implements StatefulWidget {
 
-    private readonly searchBox: SearchBox;
+    private searchBox: SearchBox;
 
     @inject(TreeDecoratorService)
     protected readonly decoratorService: TreeDecoratorService;
+
+    @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch;
+    @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory;
 
     protected decorations: Map<string, TreeDecoration.Data[]> = new Map();
 
     constructor(
         @inject(TreeProps) readonly props: TreeProps,
         @inject(TreeModel) readonly model: TreeModel,
-        @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch,
-        @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(ContextMenuRenderer) protected readonly contextMenuRenderer: ContextMenuRenderer,
     ) {
         super();
@@ -119,11 +120,11 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
         };
         this.addClass(TREE_CLASS);
         this.node.tabIndex = 0;
-        this.searchBox = searchBoxFactory(SearchBoxProps.DEFAULT);
     }
 
     @postConstruct()
     protected init(): void {
+        this.searchBox = this.searchBoxFactory(SearchBoxProps.DEFAULT);
         this.toDispose.pushAll([
             this.searchBox,
             this.searchBox.onTextChange(data => this.navigatorSearch.filter(data)),

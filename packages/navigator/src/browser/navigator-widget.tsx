@@ -22,18 +22,16 @@ import { CommonCommands } from '@theia/core/lib/browser/common-frontend-contribu
 import {
     ContextMenuRenderer, ExpandableTreeNode,
     TreeProps, TreeModel, TreeNode,
-    LabelProvider, SelectableTreeNode, CompositeTreeNode
+    SelectableTreeNode, CompositeTreeNode
 } from '@theia/core/lib/browser';
 import { FileTreeWidget, FileNode } from '@theia/filesystem/lib/browser';
 import { WorkspaceService, WorkspaceCommands } from '@theia/workspace/lib/browser';
 import { ApplicationShell } from '@theia/core/lib/browser/shell/application-shell';
 import { WorkspaceNode } from './navigator-tree';
 import { FileNavigatorModel } from './navigator-model';
-import { FileNavigatorSearch } from './navigator-search';
 // import { SearchBoxFactory } from './search-box';
 import { FileSystem } from '@theia/filesystem/lib/common/filesystem';
 import * as React from 'react';
-import {SearchBoxFactory} from '@theia/core/lib/browser/tree/search-box';
 
 export const FILE_NAVIGATOR_ID = 'files';
 export const LABEL = 'Files';
@@ -51,14 +49,12 @@ export class FileNavigatorWidget extends FileTreeWidget {
         @inject(CommandService) protected readonly commandService: CommandService,
         @inject(SelectionService) protected readonly selectionService: SelectionService,
         @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService,
-        @inject(LabelProvider) protected readonly labelProvider: LabelProvider,
-        @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
-        @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch,
+        // @inject(LabelProvider) protected readonly labelProvider: LabelProvider,
         // @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(ApplicationShell) protected readonly shell: ApplicationShell,
         @inject(FileSystem) protected readonly fileSystem: FileSystem
     ) {
-        super(props, model, navigatorSearch, searchBoxFactory, contextMenuRenderer);
+        super(props, model, contextMenuRenderer);
         this.id = FILE_NAVIGATOR_ID;
         this.title.label = LABEL;
         this.addClass(CLASS);
