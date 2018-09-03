@@ -22,7 +22,7 @@ import { CommonCommands } from '@theia/core/lib/browser/common-frontend-contribu
 import {
     ContextMenuRenderer, ExpandableTreeNode,
     TreeProps, TreeModel, TreeNode,
-    LabelProvider, Widget, SelectableTreeNode, CompositeTreeNode
+    LabelProvider, SelectableTreeNode, CompositeTreeNode
 } from '@theia/core/lib/browser';
 import { FileTreeWidget, FileNode } from '@theia/filesystem/lib/browser';
 import { WorkspaceService, WorkspaceCommands } from '@theia/workspace/lib/browser';
@@ -30,7 +30,7 @@ import { ApplicationShell } from '@theia/core/lib/browser/shell/application-shel
 import { WorkspaceNode } from './navigator-tree';
 import { FileNavigatorModel } from './navigator-model';
 import { FileNavigatorSearch } from './navigator-search';
-import { SearchBox, SearchBoxProps, SearchBoxFactory } from './search-box';
+// import { SearchBoxFactory } from './search-box';
 import { FileSystem } from '@theia/filesystem/lib/common/filesystem';
 import * as React from 'react';
 
@@ -41,7 +41,7 @@ export const CLASS = 'theia-Files';
 @injectable()
 export class FileNavigatorWidget extends FileTreeWidget {
 
-    protected readonly searchBox: SearchBox;
+    // protected readonly searchBox: SearchBox;
 
     constructor(
         @inject(TreeProps) readonly props: TreeProps,
@@ -52,7 +52,7 @@ export class FileNavigatorWidget extends FileTreeWidget {
         @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService,
         @inject(LabelProvider) protected readonly labelProvider: LabelProvider,
         @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch,
-        @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
+        // @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(ApplicationShell) protected readonly shell: ApplicationShell,
         @inject(FileSystem) protected readonly fileSystem: FileSystem
     ) {
@@ -61,18 +61,18 @@ export class FileNavigatorWidget extends FileTreeWidget {
         this.title.label = LABEL;
         this.addClass(CLASS);
         this.initialize();
-        this.searchBox = searchBoxFactory(SearchBoxProps.DEFAULT);
+        // this.searchBox = searchBoxFactory(SearchBoxProps.DEFAULT);
     }
 
     @postConstruct()
     protected init(): void {
         super.init();
         this.toDispose.pushAll([
-            this.searchBox,
-            this.searchBox.onTextChange(data => this.navigatorSearch.filter(data)),
-            this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
-            this.searchBox.onNext(() => this.model.selectNextNode()),
-            this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
+            // this.searchBox,
+            // this.searchBox.onTextChange(data => this.navigatorSearch.filter(data)),
+            // this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
+            // this.searchBox.onNext(() => this.model.selectNextNode()),
+            // this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
             this.navigatorSearch,
             this.navigatorSearch.onFilteredNodesChanged(nodes => {
                 const node = nodes.find(SelectableTreeNode.is);
@@ -86,7 +86,7 @@ export class FileNavigatorWidget extends FileTreeWidget {
                 }
             }),
             this.model.onExpansionChanged(node => {
-                this.searchBox.hide();
+                // this.searchBox.hide();
                 if (node.expanded && node.children.length === 1) {
                     const child = node.children[0];
                     if (ExpandableTreeNode.is(child) && !child.expanded) {
@@ -167,11 +167,11 @@ export class FileNavigatorWidget extends FileTreeWidget {
         super.onAfterAttach(msg);
         this.addClipboardListener(this.node, 'copy', e => this.handleCopy(e));
         this.addClipboardListener(this.node, 'paste', e => this.handlePaste(e));
-        if (this.searchBox.isAttached) {
-            Widget.detach(this.searchBox);
-        }
-        Widget.attach(this.searchBox, this.node.parentElement!);
-        this.addKeyListener(this.node, this.searchBox.keyCodePredicate.bind(this.searchBox), this.searchBox.handle.bind(this.searchBox));
+        // if (this.searchBox.isAttached) {
+        //     Widget.detach(this.searchBox);
+        // }
+        // Widget.attach(this.searchBox, this.node.parentElement!);
+        // this.addKeyListener(this.node, this.searchBox.keyCodePredicate.bind(this.searchBox), this.searchBox.handle.bind(this.searchBox));
         this.enableDndOnMainPanel();
     }
 
