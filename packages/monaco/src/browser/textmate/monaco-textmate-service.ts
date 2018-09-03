@@ -56,7 +56,11 @@ export class MonacoTextmateService implements FrontendApplicationContribution {
         }
 
         for (const grammarProvider of this.grammarProviders.getContributions()) {
-            grammarProvider.registerTextmateLanguage(this.textmateRegistry);
+            try {
+                grammarProvider.registerTextmateLanguage(this.textmateRegistry);
+            } catch (err) {
+                console.error(err);
+            }
         }
 
         this.grammarRegistry = new Registry({
@@ -98,8 +102,8 @@ export class MonacoTextmateService implements FrontendApplicationContribution {
             const grammar = await this.grammarRegistry.loadGrammarWithConfiguration(scopeName, initialLanguage, configuration);
             const options = configuration.tokenizerOption ? configuration.tokenizerOption : TokenizerOption.DEFAULT;
             monaco.languages.setTokensProvider(languageId, createTextmateTokenizer(grammar, options));
-        } catch {
-            this.logger.warn('No grammar for this language id', languageId);
+        } catch (error) {
+            this.logger.warn('No grammar for this language id', languageId, error);
         }
     }
 
