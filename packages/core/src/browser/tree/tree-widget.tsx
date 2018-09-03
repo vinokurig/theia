@@ -33,7 +33,7 @@ import * as React from 'react';
 import { List, ListRowRenderer, ScrollParams } from 'react-virtualized';
 import { TopDownTreeIterator } from './tree-iterator';
 import {SearchBox, SearchBoxFactory, SearchBoxProps} from './search-box';
-import {FileNavigatorSearch} from '@theia/navigator/lib/browser/navigator-search';
+import {FileNavigatorSearch} from './navigator-search';
 
 const debounce = require('lodash.debounce');
 
