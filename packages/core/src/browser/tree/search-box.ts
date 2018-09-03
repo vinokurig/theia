@@ -14,9 +14,9 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import {SearchBoxDebounce, SearchBoxDebounceOptions} from '@theia/core/lib/browser/tree/search-box-debounce';
-import {BaseWidget, Key, KeyCode} from '@theia/core/lib/browser';
-import {Emitter, Event} from '@theia/core';
+import {SearchBoxDebounce, SearchBoxDebounceOptions} from '../tree/search-box-debounce';
+import {BaseWidget, Key, KeyCode} from '../';
+import {Emitter, Event} from '../../common';
 
 /**
  * Initializer properties for the search box widget.

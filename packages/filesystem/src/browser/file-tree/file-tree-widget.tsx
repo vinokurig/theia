@@ -20,6 +20,8 @@ import { DirNode, FileStatNode } from './file-tree';
 import { FileTreeModel } from './file-tree-model';
 import { DisposableCollection, Disposable } from '@theia/core/lib/common';
 import * as React from 'react';
+import {FileNavigatorSearch} from '@theia/navigator/src/browser/navigator-search';
+import {SearchBoxFactory} from '@theia/core/src/browser/tree/search-box';
 
 export const FILE_TREE_CLASS = 'theia-FileTree';
 export const FILE_STAT_NODE_CLASS = 'theia-FileStatNode';
@@ -34,9 +36,11 @@ export class FileTreeWidget extends TreeWidget {
     constructor(
         @inject(TreeProps) readonly props: TreeProps,
         @inject(FileTreeModel) readonly model: FileTreeModel,
+        @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch,
+        @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(ContextMenuRenderer) contextMenuRenderer: ContextMenuRenderer
     ) {
-        super(props, model, contextMenuRenderer);
+        super(props, model, navigatorSearch, searchBoxFactory, contextMenuRenderer);
         this.addClass(FILE_TREE_CLASS);
         this.toDispose.push(this.toCancelNodeExpansion);
     }

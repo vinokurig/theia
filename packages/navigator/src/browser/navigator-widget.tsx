@@ -33,6 +33,7 @@ import { FileNavigatorSearch } from './navigator-search';
 // import { SearchBoxFactory } from './search-box';
 import { FileSystem } from '@theia/filesystem/lib/common/filesystem';
 import * as React from 'react';
+import {SearchBoxFactory} from '@theia/core/lib/browser/tree/search-box';
 
 export const FILE_NAVIGATOR_ID = 'files';
 export const LABEL = 'Files';
@@ -51,12 +52,13 @@ export class FileNavigatorWidget extends FileTreeWidget {
         @inject(SelectionService) protected readonly selectionService: SelectionService,
         @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService,
         @inject(LabelProvider) protected readonly labelProvider: LabelProvider,
+        @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch,
         // @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(ApplicationShell) protected readonly shell: ApplicationShell,
         @inject(FileSystem) protected readonly fileSystem: FileSystem
     ) {
-        super(props, model, contextMenuRenderer);
+        super(props, model, navigatorSearch, searchBoxFactory, contextMenuRenderer);
         this.id = FILE_NAVIGATOR_ID;
         this.title.label = LABEL;
         this.addClass(CLASS);
