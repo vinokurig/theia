@@ -18,12 +18,12 @@ import { inject, injectable, postConstruct } from 'inversify';
 import { Disposable, DisposableCollection } from '../../common/disposable';
 import { Event, Emitter } from '../../common/event';
 import { Tree, TreeNode } from '../tree/tree';
-import { TreeDecorator, TreeDecoration } from '../tree/tree-decorator';
+import { TreeDecoration } from '../tree/tree-decorator';
 import { TopDownTreeIterator } from '../';
 import { FuzzySearch } from './fuzzy-search';
 
 @injectable()
-export class FileNavigatorSearch implements Disposable, TreeDecorator {
+export class FileNavigatorSearch implements Disposable {
 
     readonly id = 'theia-navigator-search-decorator';
 
