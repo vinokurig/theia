@@ -49,7 +49,7 @@ export class FileNavigatorSearch implements Disposable, TreeDecorator {
         ]);
     }
 
-    async decorations(): Promise<Map<string, TreeDecoration.Data>> {
+    decorations(): Map<string, TreeDecoration.Data> {
         return new Map(this._filterResult.map(m => [m.item.id, this.toDecorator(m)] as [string, TreeDecoration.Data]));
     }
 

@@ -71,13 +71,13 @@ export class FileNavigatorWidget extends FileTreeWidget {
             // this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
             // this.searchBox.onNext(() => this.model.selectNextNode()),
             // this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
-            this.navigatorSearch,
-            this.navigatorSearch.onFilteredNodesChanged(nodes => {
-                const node = nodes.find(SelectableTreeNode.is);
-                if (node) {
-                    this.model.selectNode(node);
-                }
-            }),
+            // this.navigatorSearch,
+            // this.navigatorSearch.onFilteredNodesChanged(nodes => {
+            //     const node = nodes.find(SelectableTreeNode.is);
+            //     if (node) {
+            //         this.model.selectNode(node);
+            //     }
+            // }),
             this.model.onSelectionChanged(selection => {
                 if (this.shell.activeWidget === this) {
                     this.selectionService.selection = selection;

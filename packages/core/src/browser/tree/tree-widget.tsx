@@ -100,6 +100,7 @@ export namespace TreeWidget {
 export class TreeWidget extends ReactWidget implements StatefulWidget {
 
     private searchBox: SearchBox;
+    private filteredNodes: Map<string, TreeDecoration.Data>;
 
     @inject(TreeDecoratorService)
     protected readonly decoratorService: TreeDecoratorService;
@@ -127,7 +128,12 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
         this.searchBox = this.searchBoxFactory(SearchBoxProps.DEFAULT);
         this.toDispose.pushAll([
             this.searchBox,
-            this.searchBox.onTextChange(data => this.navigatorSearch.filter(data)),
+            this.searchBox.onTextChange(async data => {
+                await this.navigatorSearch.filter(data);
+                this.navigatorSearch.decorations();
+                this.filteredNodes = this.navigatorSearch.decorations();
+                this.model.refresh();
+            }),
             this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
             this.searchBox.onNext(() => this.model.selectNextNode()),
             this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
@@ -333,7 +339,8 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
                 title: tooltip
             };
         }
-        const highlight = this.getDecorationData(node, 'highlight')[0];
+        const decdata = this.filteredNodes ? this.filteredNodes.get(node.id) : undefined;
+        const highlight = decdata ? decdata.highlight : undefined;
         const children: React.ReactNode[] = [];
         const caption = node.name;
         if (highlight) {
