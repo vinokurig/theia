@@ -68,6 +68,11 @@ export interface TreeProps {
      * `true` if the tree widget support multi-selection. Otherwise, `false`. Defaults to `false`.
      */
     readonly multiSelect?: boolean;
+
+    /**
+     * 'true' if the tree widget support searching. Otherwise, `false`. Defaults to `false`.
+     */
+    readonly search?: boolean
 }
 
 export interface NodeProps {
@@ -100,13 +105,14 @@ export namespace TreeWidget {
 export class TreeWidget extends ReactWidget implements StatefulWidget {
 
     private searchBox: SearchBox;
-    private filteredNodes: Map<string, TreeDecoration.Data>;
+    private filteredNodes: Map<string, TreeDecoration.CaptionHighlight>;
 
     @inject(TreeDecoratorService)
     protected readonly decoratorService: TreeDecoratorService;
-
-    @inject(FileNavigatorSearch) protected readonly navigatorSearch: FileNavigatorSearch;
-    @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory;
+    @inject(FileNavigatorSearch)
+    protected readonly navigatorSearch: FileNavigatorSearch;
+    @inject(SearchBoxFactory)
+    protected readonly searchBoxFactory: SearchBoxFactory;
 
     protected decorations: Map<string, TreeDecoration.Data[]> = new Map();
 
@@ -125,18 +131,29 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
 
     @postConstruct()
     protected init(): void {
-        this.searchBox = this.searchBoxFactory(SearchBoxProps.DEFAULT);
+        if (this.props.search) {
+            this.searchBox = this.searchBoxFactory(SearchBoxProps.DEFAULT);
+            this.toDispose.pushAll([
+                this.searchBox,
+                this.searchBox.onTextChange(async data => {
+                    await this.navigatorSearch.filter(data);
+                    this.navigatorSearch.decorations();
+                    this.filteredNodes = this.navigatorSearch.decorations();
+                    this.model.refresh();
+                }),
+                this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
+                this.searchBox.onNext(() => this.model.selectNextNode()),
+                this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
+                this.navigatorSearch,
+                this.navigatorSearch.onFilteredNodesChanged(nodes => {
+                    const node = nodes.find(SelectableTreeNode.is);
+                    if (node) {
+                        this.model.selectNode(node);
+                    }
+                })
+            ]);
+        }
         this.toDispose.pushAll([
-            this.searchBox,
-            this.searchBox.onTextChange(async data => {
-                await this.navigatorSearch.filter(data);
-                this.navigatorSearch.decorations();
-                this.filteredNodes = this.navigatorSearch.decorations();
-                this.model.refresh();
-            }),
-            this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
-            this.searchBox.onNext(() => this.model.selectNextNode()),
-            this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
             this.model,
             this.model.onChanged(() => this.updateRows()),
             this.model.onSelectionChanged(() => this.updateScrollToRow()),
@@ -339,37 +356,44 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
                 title: tooltip
             };
         }
-        const decdata = this.filteredNodes ? this.filteredNodes.get(node.id) : undefined;
-        const highlight = decdata ? decdata.highlight : undefined;
         const children: React.ReactNode[] = [];
         const caption = node.name;
+        const highlight = this.getDecorationData(node, 'highlight')[0];
         if (highlight) {
-            let style: React.CSSProperties = {};
-            if (highlight.color) {
-                style = {
-                    ...style,
-                    color: highlight.color
-                };
-            }
-            if (highlight.backgroundColor) {
-                style = {
-                    ...style,
-                    backgroundColor: highlight.backgroundColor
-                };
-            }
-            const createChildren = (fragment: TreeDecoration.CaptionHighlight.Fragment) => {
-                const { data } = fragment;
-                if (fragment.highligh) {
-                    return <mark className={TreeDecoration.Styles.CAPTION_HIGHLIGHT_CLASS} style={style}>{data}</mark>;
-                } else {
-                    return data;
-                }
-            };
-            children.push(...TreeDecoration.CaptionHighlight.split(caption, highlight).map(createChildren));
-        } else {
+            children.push(this.toReactNode(caption, highlight));
+        }
+        const searchHighlight = this.filteredNodes ? this.filteredNodes.get(node.id) : undefined;
+        if (searchHighlight) {
+            children.push(this.toReactNode(caption, searchHighlight));
+        } else if (!highlight) {
             children.push(caption);
         }
         return React.createElement('div', attrs, ...children);
+    }
+
+    private toReactNode(caption: string, highlight1: TreeDecoration.CaptionHighlight): React.ReactNode[] {
+        let style: React.CSSProperties = {};
+        if (highlight1.color) {
+            style = {
+                ...style,
+                color: highlight1.color
+            };
+        }
+        if (highlight1.backgroundColor) {
+            style = {
+                ...style,
+                backgroundColor: highlight1.backgroundColor
+            };
+        }
+        const createChildren = (fragment: TreeDecoration.CaptionHighlight.Fragment) => {
+            const {data} = fragment;
+            if (fragment.highligh) {
+                return <mark className={TreeDecoration.Styles.CAPTION_HIGHLIGHT_CLASS} style={style}>{data}</mark>;
+            } else {
+                return data;
+            }
+        };
+        return TreeDecoration.CaptionHighlight.split(caption, highlight1).map(createChildren);
     }
 
     protected decorateCaption(node: TreeNode, attrs: React.HTMLAttributes<HTMLElement>): React.Attributes & React.HTMLAttributes<HTMLElement> {
@@ -589,11 +613,13 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
             Key.ARROW_DOWN,
             KeyCode.createKeyCode({ first: Key.ARROW_DOWN, modifiers: [KeyModifier.Shift] })
         ];
-        if (this.searchBox.isAttached) {
-            Widget.detach(this.searchBox);
+        if (this.props.search) {
+            if (this.searchBox.isAttached) {
+                Widget.detach(this.searchBox);
+            }
+            Widget.attach(this.searchBox, this.node.parentElement!);
+            this.addKeyListener(this.node, this.searchBox.keyCodePredicate.bind(this.searchBox), this.searchBox.handle.bind(this.searchBox));
         }
-        Widget.attach(this.searchBox, this.node.parentElement!);
-        this.addKeyListener(this.node, this.searchBox.keyCodePredicate.bind(this.searchBox), this.searchBox.handle.bind(this.searchBox));
         super.onAfterAttach(msg);
         this.addKeyListener(this.node, Key.ARROW_LEFT, event => this.handleLeft(event));
         this.addKeyListener(this.node, Key.ARROW_RIGHT, event => this.handleRight(event));

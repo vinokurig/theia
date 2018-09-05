@@ -49,8 +49,8 @@ export class FileNavigatorSearch implements Disposable {
         ]);
     }
 
-    decorations(): Map<string, TreeDecoration.Data> {
-        return new Map(this._filterResult.map(m => [m.item.id, this.toDecorator(m)] as [string, TreeDecoration.Data]));
+    decorations(): Map<string, TreeDecoration.CaptionHighlight> {
+        return new Map(this._filterResult.map(m => [m.item.id, this.toDecorator(m)] as [string, TreeDecoration.CaptionHighlight]));
     }
 
     /**
@@ -108,11 +108,9 @@ export class FileNavigatorSearch implements Disposable {
         this.filteredNodesEmitter.fire(nodes);
     }
 
-    protected toDecorator(match: FuzzySearch.Match<TreeNode>): TreeDecoration.Data {
+    protected toDecorator(match: FuzzySearch.Match<TreeNode>): TreeDecoration.CaptionHighlight {
         return {
-            highlight: {
-                ranges: match.ranges.map(this.mapRange.bind(this))
-            }
+            ranges: match.ranges.map(this.mapRange.bind(this))
         };
     }
 
