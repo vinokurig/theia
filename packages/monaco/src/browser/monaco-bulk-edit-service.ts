@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2018 Ericsson and others.
+ * Copyright (C) 2018 TypeFox and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -14,15 +14,17 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { TextmateRegistry } from './textmate-registry';
+import { injectable, inject } from 'inversify';
+import { MonacoWorkspace } from './monaco-workspace';
 
-/**
- * Callback for extensions to contribute language grammar definitions
- */
-export const LanguageGrammarDefinitionContribution = Symbol('LanguageGrammarDefinitionContribution');
-export interface LanguageGrammarDefinitionContribution {
-    registerTextmateLanguage(registry: TextmateRegistry): void;
-}
-export function getEncodedLanguageId(languageId: string): number {
-    return monaco.languages.getEncodedLanguageId(languageId);
+@injectable()
+export class MonacoBulkEditService implements monaco.editor.IBulkEditService {
+
+    @inject(MonacoWorkspace)
+    protected readonly workspace: MonacoWorkspace;
+
+    apply(edit: monaco.languages.WorkspaceEdit): monaco.Promise<monaco.editor.IBulkEditResult> {
+        return this.workspace.applyBulkEdit(edit);
+    }
+
 }
