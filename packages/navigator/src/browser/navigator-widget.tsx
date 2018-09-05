@@ -40,8 +40,6 @@ export const CLASS = 'theia-Files';
 @injectable()
 export class FileNavigatorWidget extends FileTreeWidget {
 
-    // protected readonly searchBox: SearchBox;
-
     constructor(
         @inject(TreeProps) readonly props: TreeProps,
         @inject(FileNavigatorModel) readonly model: FileNavigatorModel,
@@ -49,8 +47,6 @@ export class FileNavigatorWidget extends FileTreeWidget {
         @inject(CommandService) protected readonly commandService: CommandService,
         @inject(SelectionService) protected readonly selectionService: SelectionService,
         @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService,
-        // @inject(LabelProvider) protected readonly labelProvider: LabelProvider,
-        // @inject(SearchBoxFactory) protected readonly searchBoxFactory: SearchBoxFactory,
         @inject(ApplicationShell) protected readonly shell: ApplicationShell,
         @inject(FileSystem) protected readonly fileSystem: FileSystem
     ) {
@@ -59,25 +55,12 @@ export class FileNavigatorWidget extends FileTreeWidget {
         this.title.label = LABEL;
         this.addClass(CLASS);
         this.initialize();
-        // this.searchBox = searchBoxFactory(SearchBoxProps.DEFAULT);
     }
 
     @postConstruct()
     protected init(): void {
         super.init();
         this.toDispose.pushAll([
-            // this.searchBox,
-            // this.searchBox.onTextChange(data => this.navigatorSearch.filter(data)),
-            // this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
-            // this.searchBox.onNext(() => this.model.selectNextNode()),
-            // this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
-            // this.navigatorSearch,
-            // this.navigatorSearch.onFilteredNodesChanged(nodes => {
-            //     const node = nodes.find(SelectableTreeNode.is);
-            //     if (node) {
-            //         this.model.selectNode(node);
-            //     }
-            // }),
             this.model.onSelectionChanged(selection => {
                 if (this.shell.activeWidget === this) {
                     this.selectionService.selection = selection;
@@ -165,11 +148,6 @@ export class FileNavigatorWidget extends FileTreeWidget {
         super.onAfterAttach(msg);
         this.addClipboardListener(this.node, 'copy', e => this.handleCopy(e));
         this.addClipboardListener(this.node, 'paste', e => this.handlePaste(e));
-        // if (this.searchBox.isAttached) {
-        //     Widget.detach(this.searchBox);
-        // }
-        // Widget.attach(this.searchBox, this.node.parentElement!);
-        // this.addKeyListener(this.node, this.searchBox.keyCodePredicate.bind(this.searchBox), this.searchBox.handle.bind(this.searchBox));
         this.enableDndOnMainPanel();
     }
 
