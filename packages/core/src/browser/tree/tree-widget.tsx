@@ -110,7 +110,7 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
     @inject(TreeDecoratorService)
     protected readonly decoratorService: TreeDecoratorService;
     @inject(TreeSearch)
-    protected readonly navigatorSearch: TreeSearch;
+    protected readonly treeSearch: TreeSearch;
     @inject(SearchBoxFactory)
     protected readonly searchBoxFactory: SearchBoxFactory;
 
@@ -136,16 +136,17 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
             this.toDispose.pushAll([
                 this.searchBox,
                 this.searchBox.onTextChange(async data => {
-                    await this.navigatorSearch.filter(data);
-                    this.navigatorSearch.decorations();
-                    this.filteredNodes = this.navigatorSearch.decorations();
+                    await this.treeSearch.filter(data);
+                    this.treeSearch.decorations();
+                    this.filteredNodes = this.treeSearch.decorations();
+                    this.model.filteredNodes = this.treeSearch.filteredNodes;
                     this.update();
                 }),
-                this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
+                this.searchBox.onClose(data => this.treeSearch.filter(undefined)),
                 this.searchBox.onNext(() => this.model.selectNextNode()),
-                this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.navigatorSearch,
-                this.navigatorSearch,
-                this.navigatorSearch.onFilteredNodesChanged(nodes => {
+                this.searchBox.onPrevious(() => this.model.selectPrevNode()), this.treeSearch,
+                this.treeSearch,
+                this.treeSearch.onFilteredNodesChanged(nodes => {
                     const node = nodes.find(SelectableTreeNode.is);
                     if (node) {
                         this.model.selectNode(node);
