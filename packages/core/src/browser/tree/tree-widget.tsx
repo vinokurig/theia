@@ -32,8 +32,8 @@ import { ReactWidget } from '../widgets/react-widget';
 import * as React from 'react';
 import { List, ListRowRenderer, ScrollParams } from 'react-virtualized';
 import { TopDownTreeIterator } from './tree-iterator';
-import {SearchBox, SearchBoxFactory, SearchBoxProps} from './search-box';
-import {FileNavigatorSearch} from './navigator-search';
+import { SearchBox, SearchBoxFactory, SearchBoxProps } from './search-box';
+import { TreeSearch } from './tree-search';
 
 const debounce = require('lodash.debounce');
 
@@ -109,8 +109,8 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
 
     @inject(TreeDecoratorService)
     protected readonly decoratorService: TreeDecoratorService;
-    @inject(FileNavigatorSearch)
-    protected readonly navigatorSearch: FileNavigatorSearch;
+    @inject(TreeSearch)
+    protected readonly navigatorSearch: TreeSearch;
     @inject(SearchBoxFactory)
     protected readonly searchBoxFactory: SearchBoxFactory;
 
@@ -139,6 +139,7 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
                     await this.navigatorSearch.filter(data);
                     this.navigatorSearch.decorations();
                     this.filteredNodes = this.navigatorSearch.decorations();
+                    this.update();
                 }),
                 this.searchBox.onClose(data => this.navigatorSearch.filter(undefined)),
                 this.searchBox.onNext(() => this.model.selectNextNode()),
@@ -363,7 +364,7 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
         }
         const searchHighlight = this.filteredNodes ? this.filteredNodes.get(node.id) : undefined;
         if (searchHighlight) {
-            children.push(this.toReactNode(caption, searchHighlight));
+            children.push(...this.toReactNode(caption, searchHighlight));
         } else if (!highlight) {
             children.push(caption);
         }

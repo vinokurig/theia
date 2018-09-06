@@ -29,7 +29,6 @@ import { WorkspaceService, WorkspaceCommands } from '@theia/workspace/lib/browse
 import { ApplicationShell } from '@theia/core/lib/browser/shell/application-shell';
 import { WorkspaceNode } from './navigator-tree';
 import { FileNavigatorModel } from './navigator-model';
-// import { SearchBoxFactory } from './search-box';
 import { FileSystem } from '@theia/filesystem/lib/common/filesystem';
 import * as React from 'react';
 
