@@ -41,6 +41,7 @@ import * as path from 'path';
 import { isObject } from 'util';
 import { GrammarsReader } from './grammars-reader';
 import { CharacterPair } from '../../../api/plugin-api';
+import * as jsoncparser from 'jsonc-parser';
 
 @injectable()
 export class TheiaPluginScanner implements PluginScanner {
@@ -84,12 +85,17 @@ export class TheiaPluginScanner implements PluginScanner {
         };
     }
 
-    private readContributions(rawPlugin: PluginPackage): PluginContribution | undefined {
+    protected readContributions(rawPlugin: PluginPackage): PluginContribution | undefined {
         if (!rawPlugin.contributes) {
             return undefined;
         }
 
         const contributions: PluginContribution = {};
+        if (rawPlugin.contributes!.configuration) {
+            const config = this.readConfiguration(rawPlugin.contributes.configuration!, rawPlugin.packagePath);
+            contributions.configuration = config;
+        }
+
         if (rawPlugin.contributes!.languages) {
             const languages = this.readLanguages(rawPlugin.contributes.languages!, rawPlugin.packagePath);
             contributions.languages = languages;
@@ -136,6 +142,14 @@ export class TheiaPluginScanner implements PluginScanner {
         }
 
         return contributions;
+    }
+
+    private readConfiguration(rawConfiguration: any, pluginPath: string): any {
+        return {
+            type: rawConfiguration.type,
+            title: rawConfiguration.title,
+            properties: rawConfiguration.properties
+        };
     }
 
     private readViewsContainers(rawViewsContainers: PluginPackageViewContainer[], pluginPath: string): ViewContainer[] {
@@ -195,7 +209,8 @@ export class TheiaPluginScanner implements PluginScanner {
         if (rawLang.configuration) {
             const conf = fs.readFileSync(path.resolve(pluginPath, rawLang.configuration), 'utf8');
             if (conf) {
-                const rawConfiguration: PluginPackageLanguageContributionConfiguration = JSON.parse(conf);
+                const strippedContent = jsoncparser.stripComments(conf);
+                const rawConfiguration: PluginPackageLanguageContributionConfiguration = jsoncparser.parse(strippedContent);
 
                 const configuration: LanguageConfiguration = {
                     brackets: rawConfiguration.brackets,

@@ -49,7 +49,10 @@ export class VariableResolverService {
         return resolved as any;
     }
 
-    protected doResolve(value: Object | undefined, context: VariableResolverService.Context): Object | undefined {
+    protected async doResolve(value: Object | undefined, context: VariableResolverService.Context): Promise<Object | undefined> {
+        if (value === undefined || value === null) {
+            return value;
+        }
         if (typeof value === 'string') {
             return this.doResolveString(value, context);
         }
@@ -118,7 +121,7 @@ export namespace VariableResolverService {
                 return;
             }
             try {
-                const variable = await this.variableRegistry.getVariable(name);
+                const variable = this.variableRegistry.getVariable(name);
                 const value = variable && await variable.resolve();
                 this.resolved.set(name, value);
             } catch (e) {

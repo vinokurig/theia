@@ -52,6 +52,8 @@ export class FileNavigatorWidget extends FileTreeWidget {
         super(props, model, contextMenuRenderer);
         this.id = FILE_NAVIGATOR_ID;
         this.title.label = LABEL;
+        this.title.caption = LABEL;
+        this.title.iconClass = 'fa navigator-tab-icon';
         this.addClass(CLASS);
         this.initialize();
     }
@@ -179,9 +181,9 @@ export class FileNavigatorWidget extends FileTreeWidget {
      */
     protected renderOpenWorkspaceDiv(): React.ReactNode {
         return <div className='theia-navigator-container'>
-            You have not yet opened a workspace.
+            <div className='center'>You have not yet opened a workspace.</div>
             <div className='open-workspace-button-container'>
-                <button className='open-workspace-button' title='Select a directory as your workspace root' onClick={this.openWorkspace}>
+                <button className='open-workspace-button' title='Select a folder as your workspace root' onClick={this.openWorkspace}>
                     Open Workspace
                 </button>
             </div>

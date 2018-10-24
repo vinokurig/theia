@@ -43,9 +43,9 @@ const bogusCommand = 'thisisnotavalidcommand';
 const commandToFindInPathUnix = 'ls';
 const commandToFindInPathWindows = 'dir';
 
-// we use test-resources subfolder ('<theia>/packages/task/src/node/test-resources/'),
+// we use test-resources subfolder ('<theia>/packages/task/test-resources/'),
 // as workspace root, for these tests
-const wsRoot: string = FileUri.fsPath(new URI(__dirname).resolve('test-resources'));
+const wsRoot: string = FileUri.fsPath(new URI(__dirname).resolve('../../test-resources'));
 
 describe('Task server / back-end', function () {
     this.timeout(10000);
@@ -55,8 +55,6 @@ describe('Task server / back-end', function () {
     let taskWatcher: TaskWatcher;
 
     beforeEach(async () => {
-        process.argv.push(`--root-dir=${wsRoot}`);
-
         const testContainer = createTaskTestContainer();
         taskWatcher = testContainer.get(TaskWatcher);
         taskServer = testContainer.get(TaskServer);
@@ -65,7 +63,6 @@ describe('Task server / back-end', function () {
     });
 
     afterEach(() => {
-        process.argv.pop();
         taskServer = undefined!;
         taskWatcher = undefined!;
         const s = server;

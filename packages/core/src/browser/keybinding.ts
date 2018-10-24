@@ -55,6 +55,11 @@ export namespace Keybinding {
         const keyCodesString = keybinding.keybinding.split(' ');
         return KeySequence.acceleratorFor(keyCodesString.map(k => KeyCode.parse(k)), separator);
     }
+
+    /* Determine whether object is a KeyBinding */
+    export function is(arg: Keybinding | any): arg is Keybinding {
+        return !!arg && arg === Object(arg) && 'command' in arg && 'keybinding' in arg;
+    }
 }
 
 export interface Keybinding {
@@ -68,6 +73,11 @@ export interface Keybinding {
      * keybinding context.
      */
     context?: string;
+}
+
+export interface ScopedKeybinding extends Keybinding {
+    /** Current keybinding scope */
+    scope?: KeybindingScope;
 }
 
 export const KeybindingContribution = Symbol('KeybindingContribution');
@@ -165,6 +175,31 @@ export class KeybindingRegistry {
         this.doRegisterKeybindings(bindings, KeybindingScope.DEFAULT);
     }
 
+    /**
+     * Unregister keybinding from the registry
+     *
+     * @param binding
+     */
+    unregisterKeybinding(binding: Keybinding): void;
+    /**
+     * Unregister keybinding from the registry
+     *
+     * @param key
+     */
+    unregisterKeybinding(key: string): void;
+    unregisterKeybinding(keyOrBinding: Keybinding | string): void {
+        const key = Keybinding.is(keyOrBinding) ? keyOrBinding.keybinding : keyOrBinding;
+        const keymap = this.keymaps[KeybindingScope.DEFAULT];
+        const bindings = keymap.filter(el => el.keybinding === key);
+
+        bindings.forEach(binding => {
+            const idx = keymap.indexOf(binding);
+            if (idx >= 0) {
+                keymap.splice(idx, 1);
+            }
+        });
+    }
+
     protected doRegisterKeybindings(bindings: Keybinding[], scope: KeybindingScope = KeybindingScope.DEFAULT) {
         for (const binding of bindings) {
             this.doRegisterKeybinding(binding, scope);
@@ -212,6 +247,10 @@ export class KeybindingRegistry {
             return true;
         }
         return false;
+    }
+
+    containsKeybindingInScope(binding: Keybinding, scope = KeybindingScope.USER): boolean {
+        return this.containsKeybinding(this.keymaps[scope], binding);
     }
 
     /**
@@ -307,15 +346,15 @@ export class KeybindingRegistry {
      *
      * @param commandId The ID of the command for which we are looking for keybindings.
      */
-    getKeybindingsForCommand(commandId: string): Keybinding[] {
-        const result: Keybinding[] = [];
+    getKeybindingsForCommand(commandId: string): ScopedKeybinding[] {
+        const result: ScopedKeybinding[] = [];
 
         for (let scope = KeybindingScope.END - 1; scope >= KeybindingScope.DEFAULT; scope--) {
             this.keymaps[scope].forEach(binding => {
                 const command = this.commandRegistry.getCommand(binding.command);
                 if (command) {
                     if (command.id === commandId) {
-                        result.push(binding);
+                        result.push({ ...binding, scope });
                     }
                 }
             });

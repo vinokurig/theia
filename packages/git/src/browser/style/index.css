@@ -129,6 +129,12 @@
     background: var(--theia-content-font-color3);
 }
 
+#theia-gitContainer .buttons .toolbar-button .open-file {
+    height: 16px;
+    width: 12px;
+    background: var(--theia-icon-open-file) no-repeat center center;
+}
+
 #theia-gitContainer .gitItem .itemButtonsContainer .buttons {
     display: none;
     margin: 0 3px;
@@ -176,7 +182,7 @@
     width: 100%;
 }
 
-.theia-git:focus .theia-mod-selected{
+.theia-git div:focus .theia-mod-selected{
     background: var(--theia-accent-color3);
 }
 
@@ -315,7 +321,11 @@
     -ms-user-select: none;
     -o-user-select: none;
  }
- 
+
  .no-select:focus {
     outline: none;
  }
+
+.git-tab-icon::before {
+    content: "\f126"
+}

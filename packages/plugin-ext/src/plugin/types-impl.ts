@@ -18,10 +18,23 @@ import { illegalArgument } from '../common/errors';
 import * as theia from '@theia/plugin';
 import URI from 'vscode-uri';
 import { relative } from '../common/paths-util';
-import { isMarkdownString } from './type-converters';
+import { startsWithIgnoreCase } from '../common/strings';
+import { MarkdownString, isMarkdownString } from './markdown-string';
 
 export class Disposable {
     private disposable: undefined | (() => void);
+
+    static from(...disposables: { dispose(): any }[]): Disposable {
+        return new Disposable(() => {
+            if (disposables) {
+                for (const disposable of disposables) {
+                    if (disposable && typeof disposable.dispose === 'function') {
+                        disposable.dispose();
+                    }
+                }
+            }
+        });
+    }
 
     constructor(func: () => void) {
         this.disposable = func;
@@ -498,36 +511,6 @@ export class SnippetString {
     }
 }
 
-export class MarkdownString {
-
-    value: string;
-    isTrusted?: boolean;
-
-    constructor(value?: string) {
-        this.value = value || '';
-    }
-
-    appendText(value: string): MarkdownString {
-        // escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash
-        this.value += value.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&');
-        return this;
-    }
-
-    appendMarkdown(value: string): MarkdownString {
-        this.value += value;
-        return this;
-    }
-
-    appendCodeblock(code: string, language: string = ''): MarkdownString {
-        this.value += '\n```';
-        this.value += language;
-        this.value += '\n';
-        this.value += code;
-        this.value += '\n```\n';
-        return this;
-    }
-}
-
 export class ThemeColor {
     constructor(public id: string) {
     }
@@ -862,18 +845,99 @@ export class Hover {
 
 export type Definition = Location | Location[];
 
+export class DocumentLink {
+    range: Range;
+    target: URI;
+
+    constructor(range: Range, target: URI) {
+        if (target && !(target instanceof URI)) {
+            throw illegalArgument('target');
+        }
+        if (!Range.isRange(range) || range.isEmpty) {
+            throw illegalArgument('range');
+        }
+        this.range = range;
+        this.target = target;
+    }
+}
+
+export class CodeLens {
+
+    range: Range;
+
+    command?: theia.Command;
+
+    get isResolved(): boolean {
+        return !!this.command;
+    }
+
+    constructor(range: Range, command?: theia.Command) {
+        this.range = range;
+        this.command = command;
+    }
+}
+
+export enum CodeActionTrigger {
+    Automatic = 1,
+    Manual = 2,
+}
+
+export class CodeActionKind {
+    private static readonly sep = '.';
+
+    public static readonly Empty = new CodeActionKind('');
+    public static readonly QuickFix = CodeActionKind.Empty.append('quickfix');
+    public static readonly Refactor = CodeActionKind.Empty.append('refactor');
+    public static readonly RefactorExtract = CodeActionKind.Refactor.append('extract');
+    public static readonly RefactorInline = CodeActionKind.Refactor.append('inline');
+    public static readonly RefactorRewrite = CodeActionKind.Refactor.append('rewrite');
+    public static readonly Source = CodeActionKind.Empty.append('source');
+    public static readonly SourceOrganizeImports = CodeActionKind.Source.append('organizeImports');
+
+    constructor(
+        public readonly value: string
+    ) { }
+
+    public append(parts: string): CodeActionKind {
+        return new CodeActionKind(this.value ? this.value + CodeActionKind.sep + parts : parts);
+    }
+
+    public contains(other: CodeActionKind): boolean {
+        return this.value === other.value || startsWithIgnoreCase(other.value, this.value + CodeActionKind.sep);
+    }
+}
+
+export enum TextDocumentSaveReason {
+    Manual = 1,
+    AfterDelay = 2,
+    FocusOut = 3
+}
+
+export class CodeAction {
+    title: string;
+
+    command?: theia.Command;
+
+    diagnostics?: Diagnostic[];
+
+    kind?: CodeActionKind;
+
+    constructor(title: string, kind?: CodeActionKind) {
+        this.title = title;
+        this.kind = kind;
+    }
+}
+
 export class ProgressOptions {
     /**
      * The location at which progress should show.
      */
     location: ProgressLocation;
-
     /**
      * A human-readable string which will be used to describe the
      * operation.
      */
     title?: string;
-
     /**
      * Controls if a cancel button should show to allow the user to
      * cancel the long running operation.  Note that currently only
@@ -885,7 +949,6 @@ export class ProgressOptions {
         this.location = location;
     }
 }
-
 export class Progress<T> {
     /**
      * Report a progress update.
@@ -896,18 +959,15 @@ export class Progress<T> {
     }
 }
 export enum ProgressLocation {
-
     /**
      * Show progress for the source control viewlet, as overlay for the icon and as progress bar
      * inside the viewlet (when visible). Neither supports cancellation nor discrete progress.
      */
     SourceControl = 1,
-
     /**
      * Show progress in the status bar of the editor. Neither supports cancellation nor discrete progress.
      */
     Window = 10,
-
     /**
      * Show progress as notification with an optional cancel button. Supports to show infinite and discrete progress.
      */

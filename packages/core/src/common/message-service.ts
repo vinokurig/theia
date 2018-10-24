@@ -15,6 +15,7 @@
  ********************************************************************************/
 
 import { injectable, inject } from 'inversify';
+import { Event } from '../common';
 import {
     MessageClient,
     MessageType,
@@ -77,6 +78,10 @@ export class MessageService {
 
     newProgress(message: ProgressMessageArguments): Promise<ProgressToken | undefined> {
         return this.client.newProgress(message);
+    }
+
+    get onProgressCanceled(): Event<string> {
+        return this.client.onProgressCanceled();
     }
 
     stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {

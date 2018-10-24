@@ -38,6 +38,16 @@ declare module '@theia/plugin' {
 
         static create(func: () => void): Disposable;
 
+        /**
+         * Combine many disposable-likes into one. Use this method
+         * when having objects with a dispose function which are not
+         * instances of Disposable.
+         *
+         * @param disposableLikes Objects that have at least a `dispose`-function member.
+         * @return Returns a new disposable which, upon dispose, will
+         * dispose all provided disposables.
+         */
+        static from(...disposableLikes: { dispose: () => any }[]): Disposable;
     }
 
     export type PluginType = 'frontend' | 'backend';
@@ -1405,6 +1415,79 @@ declare module '@theia/plugin' {
         validatePosition(position: Position): Position;
     }
 
+    /**
+     * Represents reasons why a text document is saved.
+     */
+    export enum TextDocumentSaveReason {
+
+        /**
+         * Manually triggered, e.g. by the user pressing save, by starting debugging,
+         * or by an API call.
+         */
+        Manual = 1,
+
+        /**
+         * Automatic after a delay.
+         */
+        AfterDelay = 2,
+
+        /**
+         * When the editor lost focus.
+         */
+        FocusOut = 3
+    }
+
+    /**
+      * An event that is fired when a [document](#TextDocument) will be saved.
+      *
+      * To make modifications to the document before it is being saved, call the
+      * [`waitUntil`](#TextDocumentWillSaveEvent.waitUntil)-function with a thenable
+      * that resolves to an array of [text edits](#TextEdit).
+      */
+    export interface TextDocumentWillSaveEvent {
+
+        /**
+         * The document that will be saved.
+         */
+        document: TextDocument;
+
+        /**
+         * The reason why save was triggered.
+         */
+        reason: TextDocumentSaveReason;
+
+        /**
+         * Allows to pause the event loop and to apply [pre-save-edits](#TextEdit).
+         * Edits of subsequent calls to this function will be applied in order. The
+         * edits will be *ignored* if concurrent modifications of the document happened.
+         *
+         * *Note:* This function can only be called during event dispatch and not
+         * in an asynchronous manner:
+         *
+         * ```ts
+         * workspace.onWillSaveTextDocument(event => {
+         *  // async, will *throw* an error
+         *  setTimeout(() => event.waitUntil(promise));
+         *
+         *  // sync, OK
+         *  event.waitUntil(promise);
+         * })
+         * ```
+         *
+         * @param thenable A thenable that resolves to [pre-save-edits](#TextEdit).
+         */
+        waitUntil(thenable: PromiseLike<TextEdit[]>): void;
+
+        /**
+         * Allows to pause the event loop until the provided thenable resolved.
+         *
+         * *Note:* This function can only be called during event dispatch.
+         *
+         * @param thenable A thenable that delays saving.
+         */
+        waitUntil(thenable: PromiseLike<any>): void;
+    }
+
     export interface TextDocumentChangeEvent {
         document: TextDocument;
 
@@ -1556,6 +1639,49 @@ declare module '@theia/plugin' {
          * Dispose this object
          */
         dispose(): void;
+    }
+
+    /**
+     * A file system watcher notifies about changes to files and folders
+     * on disk.
+     *
+     * To get an instance of a `FileSystemWatcher` use
+     * [createFileSystemWatcher](#workspace.createFileSystemWatcher).
+     */
+    export interface FileSystemWatcher extends Disposable {
+
+        /**
+         * true if this file system watcher has been created such that
+         * it ignores creation file system events.
+         */
+        ignoreCreateEvents: boolean;
+
+        /**
+         * true if this file system watcher has been created such that
+         * it ignores change file system events.
+         */
+        ignoreChangeEvents: boolean;
+
+        /**
+         * true if this file system watcher has been created such that
+         * it ignores delete file system events.
+         */
+        ignoreDeleteEvents: boolean;
+
+        /**
+         * An event which fires on file/folder creation.
+         */
+        onDidCreate: Event<Uri>;
+
+        /**
+         * An event which fires on file/folder change.
+         */
+        onDidChange: Event<Uri>;
+
+        /**
+         * An event which fires on file/folder deletion.
+         */
+        onDidDelete: Event<Uri>;
     }
 
     /**
@@ -2001,8 +2127,8 @@ declare module '@theia/plugin' {
          * like "TypeScript", and an array of extensions, e.g.
          * ```ts
          * {
-         * 	'Images': ['png', 'jpg']
-         * 	'TypeScript': ['ts', 'tsx']
+         *  'Images': ['png', 'jpg']
+         *  'TypeScript': ['ts', 'tsx']
          * }
          * ```
          */
@@ -2075,6 +2201,11 @@ declare module '@theia/plugin' {
          * Environment variables for terminal in format key - value.
          */
         env?: { [key: string]: string | null };
+
+        /**
+         * Terminal attributes. Can be useful to apply some implementation specific information.
+         */
+        attributes?: { [key: string]: string | null };
     }
 
     /**
@@ -2091,6 +2222,19 @@ declare module '@theia/plugin' {
          * extension is deactivated the disposables will be disposed.
          */
         subscriptions: { dispose(): any }[];
+
+        /**
+        * The absolute file path of the directory containing the extension.
+        */
+        extensionPath: string;
+
+        /**
+         * Get the absolute path of a resource contained in the extension.
+         *
+         * @param relativePath A relative path to a resource contained in the extension.
+         * @return The absolute path of the resource.
+         */
+        asAbsolutePath(relativePath: string): string;
     }
 
     /**
@@ -2741,6 +2885,11 @@ declare module '@theia/plugin' {
         export const onDidChangeTextDocument: Event<TextDocumentChangeEvent>;
 
         /**
+         * An event that is emitted when a [text document](#TextDocument) is saved to disk.
+         */
+        export const onDidSaveTextDocument: Event<TextDocument>;
+
+        /**
          * Opens a document. Will return early if this document is already open. Otherwise
          * the document is loaded and the [didOpen](#workspace.onDidOpenTextDocument)-event fires.
          *
@@ -2797,6 +2946,41 @@ declare module '@theia/plugin' {
          * An event that is emitted when the [configuration](#WorkspaceConfiguration) changed.
          */
         export const onDidChangeConfiguration: Event<ConfigurationChangeEvent>;
+
+        /*
+         * Creates a file system watcher.
+         *
+         * A glob pattern that filters the file events on their absolute path must be provided. Optionally,
+         * flags to ignore certain kinds of events can be provided. To stop listening to events the watcher must be disposed.
+         *
+         * *Note* that only files within the current [workspace folders](#workspace.workspaceFolders) can be watched.
+         *
+         * @param globPattern A [glob pattern](#GlobPattern) that is applied to the absolute paths of created, changed,
+         * and deleted files. Use a [relative pattern](#RelativePattern) to limit events to a certain [workspace folder](#WorkspaceFolder).
+         * @param ignoreCreateEvents Ignore when files have been created.
+         * @param ignoreChangeEvents Ignore when files have been changed.
+         * @param ignoreDeleteEvents Ignore when files have been deleted.
+         * @return A new file system watcher instance.
+         */
+        export function createFileSystemWatcher(globPattern: GlobPattern, ignoreCreateEvents?: boolean, ignoreChangeEvents?: boolean, ignoreDeleteEvents?: boolean): FileSystemWatcher;
+
+        /**
+         * Find files across all [workspace folders](#workspace.workspaceFolders) in the workspace.
+         *
+         * @sample `findFiles('**​/*.js', '**​/node_modules/**', 10)`
+         * @param include A [glob pattern](#GlobPattern) that defines the files to search for. The glob pattern
+         * will be matched against the file paths of resulting matches relative to their workspace. Use a [relative pattern](#RelativePattern)
+         * to restrict the search results to a [workspace folder](#WorkspaceFolder).
+         * @param exclude  A [glob pattern](#GlobPattern) that defines files and folders to exclude. The glob pattern
+         * will be matched against the file paths of resulting matches relative to their workspace. When `undefined` only default excludes will
+         * apply, when `null` no excludes will apply.
+         * @param maxResults An upper-bound for the result.
+         * @param token A token that can be used to signal cancellation to the underlying search engine.
+         * @return A thenable that resolves to an array of resource identifiers. Will return no results if no
+         * [workspace folders](#workspace.workspaceFolders) are opened.
+         */
+        export function findFiles(include: GlobPattern, exclude?: GlobPattern | undefined, maxResults?: number, token?: CancellationToken): PromiseLike<Uri[]>;
+
     }
 
     export namespace env {
@@ -3710,6 +3894,240 @@ declare module '@theia/plugin' {
     }
 
     /**
+       * A code action represents a change that can be performed in code, e.g. to fix a problem or
+       * to refactor code.
+       *
+       * A CodeAction must set either [`edit`](CodeAction#edit) and/or a [`command`](CodeAction#command). If both are supplied, the `edit` is applied first, then the command is executed.
+       */
+    export class CodeAction {
+
+        /**
+         * A short, human-readable, title for this code action.
+         */
+        title: string;
+
+        /**
+         * [Diagnostics](#Diagnostic) that this code action resolves.
+         */
+        diagnostics?: Diagnostic[];
+
+        /**
+         * A [command](#Command) this code action executes.
+         */
+        command?: Command;
+
+        /**
+         * [Kind](#CodeActionKind) of the code action.
+         *
+         * Used to filter code actions.
+         */
+        kind?: CodeActionKind;
+
+        /**
+         * Creates a new code action.
+         *
+         * A code action must have at least a [title](#CodeAction.title) and [edits](#CodeAction.edit)
+         * and/or a [command](#CodeAction.command).
+         *
+         * @param title The title of the code action.
+         * @param kind The kind of the code action.
+         */
+        constructor(title: string, kind?: CodeActionKind);
+    }
+
+    /**
+     * The code action interface defines the contract between extensions and
+     * the [light bulb](https://code.visualstudio.com/docs/editor/editingevolved#_code-action) feature.
+     *
+     * A code action can be any command that is [known](#commands.getCommands) to the system.
+     */
+    export interface CodeActionProvider {
+        /**
+         * Provide commands for the given document and range.
+         *
+         * @param document The document in which the command was invoked.
+         * @param range The selector or range for which the command was invoked. This will always be a selection if
+         * there is a currently active editor.
+         * @param context Context carrying additional information.
+         * @param token A cancellation token.
+         * @return An array of commands, quick fixes, or refactorings or a thenable of such. The lack of a result can be
+         * signaled by returning `undefined`, `null`, or an empty array.
+         */
+        provideCodeActions(document: TextDocument, range: Range | Selection, context: CodeActionContext, token: CancellationToken): ProviderResult<(Command | CodeAction)[]>;
+    }
+
+    /**
+     * Metadata about the type of code actions that a [CodeActionProvider](#CodeActionProvider) providers
+     */
+    export interface CodeActionProviderMetadata {
+        /**
+         * [CodeActionKinds](#CodeActionKind) that this provider may return.
+         *
+         * The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the provider
+         * may list our every specific kind they provide, such as `CodeActionKind.Refactor.Extract.append('function`)`
+         */
+        readonly providedCodeActionKinds?: ReadonlyArray<CodeActionKind>;
+    }
+
+    /**
+     * A code lens represents a [command](#Command) that should be shown along with
+     * source text, like the number of references, a way to run tests, etc.
+     *
+     * A code lens is _unresolved_ when no command is associated to it. For performance
+     * reasons the creation of a code lens and resolving should be done to two stages.
+     *
+     * @see [CodeLensProvider.provideCodeLenses](#CodeLensProvider.provideCodeLenses)
+     * @see [CodeLensProvider.resolveCodeLens](#CodeLensProvider.resolveCodeLens)
+     */
+    export class CodeLens {
+
+        /**
+         * The range in which this code lens is valid. Should only span a single line.
+         */
+        range: Range;
+
+        /**
+         * The command this code lens represents.
+         */
+        command?: Command;
+
+        /**
+         * `true` when there is a command associated.
+         */
+        readonly isResolved: boolean;
+
+        /**
+         * Creates a new code lens object.
+         *
+         * @param range The range to which this code lens applies.
+         * @param command The command associated to this code lens.
+         */
+        constructor(range: Range, command?: Command);
+    }
+
+    /**
+     * Kind of a code action.
+     *
+     * Kinds are a hierarchical list of identifiers separated by `.`, e.g. `"refactor.extract.function"`.
+     *
+     * Code action kinds are used by VS Code for UI elements such as the refactoring context menu. Users
+     * can also trigger code actions with a specific kind with the `editor.action.codeAction` command.
+     */
+    export class CodeActionKind {
+        /**
+         * Empty kind.
+         */
+        static readonly Empty: CodeActionKind;
+
+        /**
+         * Base kind for quickfix actions: `quickfix`.
+         *
+         * Quick fix actions address a problem in the code and are shown in the normal code action context menu.
+         */
+        static readonly QuickFix: CodeActionKind;
+
+        /**
+         * Base kind for refactoring actions: `refactor`
+         *
+         * Refactoring actions are shown in the refactoring context menu.
+         */
+        static readonly Refactor: CodeActionKind;
+
+        /**
+         * Base kind for refactoring extraction actions: `refactor.extract`
+         *
+         * Example extract actions:
+         *
+         * - Extract method
+         * - Extract function
+         * - Extract variable
+         * - Extract interface from class
+         * - ...
+         */
+        static readonly RefactorExtract: CodeActionKind;
+
+        /**
+         * Base kind for refactoring inline actions: `refactor.inline`
+         *
+         * Example inline actions:
+         *
+         * - Inline function
+         * - Inline variable
+         * - Inline constant
+         * - ...
+         */
+        static readonly RefactorInline: CodeActionKind;
+
+        /**
+         * Base kind for refactoring rewrite actions: `refactor.rewrite`
+         *
+         * Example rewrite actions:
+         *
+         * - Convert JavaScript function to class
+         * - Add or remove parameter
+         * - Encapsulate field
+         * - Make method static
+         * - Move method to base class
+         * - ...
+         */
+        static readonly RefactorRewrite: CodeActionKind;
+
+        /**
+         * Base kind for source actions: `source`
+         *
+         * Source code actions apply to the entire file and can be run on save
+         * using `editor.codeActionsOnSave`. They also are shown in `source` context menu.
+         */
+        static readonly Source: CodeActionKind;
+
+        /**
+         * Base kind for an organize imports source action: `source.organizeImports`.
+         */
+        static readonly SourceOrganizeImports: CodeActionKind;
+
+        private constructor(value: string);
+
+        /**
+         * String value of the kind, e.g. `"refactor.extract.function"`.
+         */
+        readonly value?: string;
+
+        /**
+         * Create a new kind by appending a more specific selector to the current kind.
+         *
+         * Does not modify the current kind.
+         */
+        append(parts: string): CodeActionKind;
+
+        /**
+         * Does this kind contain `other`?
+         *
+         * The kind `"refactor"` for example contains `"refactor.extract"` and ``"refactor.extract.function"`, but not `"unicorn.refactor.extract"` or `"refactory.extract"`
+         *
+         * @param other Kind to check.
+         */
+        contains(other: CodeActionKind): boolean;
+    }
+
+    /**
+     * Contains additional diagnostic information about the context in which
+     * a [code action](#CodeActionProvider.provideCodeActions) is run.
+     */
+    export interface CodeActionContext {
+        /**
+         * An array of diagnostics.
+         */
+        readonly diagnostics: Diagnostic[];
+
+        /**
+         * Requested kind of actions to return.
+         *
+         * Actions not of this kind are filtered out before being shown by the lightbulb.
+         */
+        readonly only?: CodeActionKind;
+    }
+
+    /**
      * The document formatting provider interface defines the contract between extensions and
      * the formatting-feature.
      */
@@ -3726,6 +4144,34 @@ declare module '@theia/plugin' {
          */
         provideDocumentFormattingEdits(
             document: TextDocument,
+            options: FormattingOptions,
+            token: CancellationToken | undefined
+        ): ProviderResult<TextEdit[] | undefined>;
+    }
+
+    /**
+     * The document formatting provider interface defines the contract between extensions and
+     * the formatting-feature.
+     */
+    export interface DocumentRangeFormattingEditProvider {
+
+        /**
+         * Provide formatting edits for a range in a document.
+         *
+         * The given range is a hint and providers can decide to format a smaller
+         * or larger range. Often this is done by adjusting the start and end
+         * of the range to full syntax nodes.
+         *
+         * @param document The document in which the command was invoked.
+         * @param range The range which should be formatted.
+         * @param options Options controlling formatting.
+         * @param token A cancellation token.
+         * @return A set of text edits or a thenable that resolves to such. The lack of a result can be
+         * signaled by returning `undefined`, `null`, or an empty array.
+         */
+        provideDocumentRangeFormattingEdits(
+            document: TextDocument,
+            range: Range,
             options: FormattingOptions,
             token: CancellationToken | undefined
         ): ProviderResult<TextEdit[] | undefined>;
@@ -3750,6 +4196,89 @@ declare module '@theia/plugin' {
          * Signature for further properties.
          */
         [key: string]: boolean | number | string;
+    }
+
+    /**
+    * The document formatting provider interface defines the contract between extensions and
+    * the formatting-feature.
+    */
+    export interface OnTypeFormattingEditProvider {
+
+        /**
+         * Provide formatting edits after a character has been typed.
+         *
+         * The given position and character should hint to the provider
+         * what range the position to expand to, like find the matching `{`
+         * when `}` has been entered.
+         *
+         * @param document The document in which the command was invoked.
+         * @param position The position at which the command was invoked.
+         * @param ch The character that has been typed.
+         * @param options Options controlling formatting.
+         * @param token A cancellation token.
+         * @return A set of text edits or a thenable that resolves to such. The lack of a result can be
+         * signaled by returning `undefined`, `null`, or an empty array.
+         */
+        provideOnTypeFormattingEdits(document: TextDocument,
+            position: Position,
+            ch: string,
+            options: FormattingOptions,
+            token: CancellationToken | undefined
+        ): ProviderResult<TextEdit[] | undefined>;
+    }
+
+    /**
+     * A document link is a range in a text document that links to an internal or external resource, like another
+     * text document or a web site.
+     */
+    export class DocumentLink {
+
+        /**
+         * The range this link applies to.
+         */
+        range: Range;
+
+        /**
+         * The uri this link points to.
+         */
+        target?: Uri;
+
+        /**
+         * Creates a new document link.
+         *
+         * @param range The range the document link applies to. Must not be empty.
+         * @param target The uri the document link points to.
+         */
+        constructor(range: Range, target?: Uri);
+    }
+
+    /**
+     * The document link provider defines the contract between extensions and feature of showing
+     * links in the editor.
+     */
+    export interface DocumentLinkProvider {
+
+        /**
+         * Provide links for the given document. Note that the editor ships with a default provider that detects
+         * `http(s)` and `file` links.
+         *
+         * @param document The document in which the command was invoked.
+         * @param token A cancellation token.
+         * @return An array of [document links](#DocumentLink) or a thenable that resolves to such. The lack of a result
+         * can be signaled by returning `undefined`, `null`, or an empty array.
+         */
+        provideDocumentLinks(document: TextDocument, token: CancellationToken | undefined): ProviderResult<DocumentLink[]>;
+
+        /**
+         * Given a link fill in its [target](#DocumentLink.target). This method is called when an incomplete
+         * link is selected in the UI. Providers can implement this method and return incomplete links
+         * (without target) from the [`provideDocumentLinks`](#DocumentLinkProvider.provideDocumentLinks) method which
+         * often helps to improve performance.
+         *
+         * @param link The link that is to be resolved.
+         * @param token A cancellation token.
+         */
+        resolveDocumentLink?(link: DocumentLink, token: CancellationToken | undefined): ProviderResult<DocumentLink>;
     }
 
     export namespace languages {
@@ -3906,6 +4435,70 @@ declare module '@theia/plugin' {
          * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
          */
         export function registerDocumentFormattingEditProvider(selector: DocumentSelector, provider: DocumentFormattingEditProvider): Disposable;
+
+        /**
+         * Register a formatting provider for a document range.
+         *
+         * *Note:* A document range provider is also a [document formatter](#DocumentFormattingEditProvider)
+         * which means there is no need to [register](registerDocumentFormattingEditProvider) a document
+         * formatter when also registering a range provider.
+         *
+         * Multiple providers can be registered for a language. In that case providers are sorted
+         * by their [score](#languages.match) and the best-matching provider is used. Failure
+         * of the selected provider will cause a failure of the whole operation.
+         *
+         * @param selector A selector that defines the documents this provider is applicable to.
+         * @param provider A document range formatting edit provider.
+         * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+         */
+        export function registerDocumentRangeFormattingEditProvider(selector: DocumentSelector, provider: DocumentRangeFormattingEditProvider): Disposable;
+
+        /**
+        * Register a code action provider.
+        *
+        * Multiple providers can be registered for a language. In that case providers are asked in
+        * parallel and the results are merged. A failing provider (rejected promise or exception) will
+        * not cause a failure of the whole operation.
+        *
+        * @param selector A selector that defines the documents this provider is applicable to.
+        * @param provider A code action provider.
+        * @param metadata Metadata about the kind of code actions the provider providers.
+        * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+        */
+        export function registerCodeActionsProvider(selector: DocumentSelector, provider: CodeActionProvider, metadata?: CodeActionProviderMetadata): Disposable;
+
+        /**
+         * Register a formatting provider that works on type. The provider is active when the user enables the setting `editor.formatOnType`.
+         *
+         * Multiple providers can be registered for a language. In that case providers are sorted
+         * by their [score](#languages.match) and the best-matching provider is used. Failure
+         * of the selected provider will cause a failure of the whole operation.
+         *
+         * @param selector A selector that defines the documents this provider is applicable to.
+         * @param provider An on type formatting edit provider.
+         * @param firstTriggerCharacter A character on which formatting should be triggered, like `}`.
+         * @param moreTriggerCharacter More trigger characters.
+         * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+         */
+        export function registerOnTypeFormattingEditProvider(
+            selector: DocumentSelector,
+            provider: OnTypeFormattingEditProvider,
+            firstTriggerCharacter: string,
+            ...moreTriggerCharacter: string[]
+        ): Disposable;
+
+        /**
+        * Register a document link provider.
+        *
+        * Multiple providers can be registered for a language. In that case providers are asked in
+        * parallel and the results are merged. A failing provider (rejected promise or exception) will
+        * not cause a failure of the whole operation.
+        *
+        * @param selector A selector that defines the documents this provider is applicable to.
+        * @param provider A document link provider.
+        * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+        */
+        export function registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider): Disposable;
     }
 
     /**

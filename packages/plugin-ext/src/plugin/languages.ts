@@ -38,19 +38,31 @@ import {
     SerializedDocumentFilter,
     SignatureHelp,
     Hover,
+    Range,
     SingleEditOperation,
     FormattingOptions,
     Definition,
-    DefinitionLink
+    DefinitionLink,
+    DocumentLink
 } from '../api/model';
 import { CompletionAdapter } from './languages/completion';
 import { Diagnostics } from './languages/diagnostics';
 import { SignatureHelpAdapter } from './languages/signature';
 import { HoverAdapter } from './languages/hover';
 import { DocumentFormattingAdapter } from './languages/document-formatting';
+import { RangeFormattingAdapter } from './languages/range-formatting';
+import { OnTypeFormattingAdapter } from './languages/on-type-formatting';
 import { DefinitionAdapter } from './languages/definition';
+import { LinkProviderAdapter } from './languages/link-provider';
 
-type Adapter = CompletionAdapter | SignatureHelpAdapter | HoverAdapter | DocumentFormattingAdapter | DefinitionAdapter;
+type Adapter = CompletionAdapter |
+    SignatureHelpAdapter |
+    HoverAdapter |
+    DocumentFormattingAdapter |
+    RangeFormattingAdapter |
+    OnTypeFormattingAdapter |
+    DefinitionAdapter |
+    LinkProviderAdapter;
 
 export class LanguagesExtImpl implements LanguagesExt {
 
@@ -229,6 +241,56 @@ export class LanguagesExtImpl implements LanguagesExt {
     }
     // ### Document Formatting Edit end
 
+    // ### Document Range Formatting Edit begin
+    registerDocumentRangeFormattingEditProvider(selector: theia.DocumentSelector, provider: theia.DocumentRangeFormattingEditProvider): theia.Disposable {
+        const callId = this.addNewAdapter(new RangeFormattingAdapter(provider, this.documents));
+        this.proxy.$registerRangeFormattingProvider(callId, this.transformDocumentSelector(selector));
+        return this.createDisposable(callId);
+    }
+
+    $provideDocumentRangeFormattingEdits(handle: number, resource: UriComponents, range: Range, options: FormattingOptions): Promise<SingleEditOperation[] | undefined> {
+        return this.withAdapter(handle, RangeFormattingAdapter, adapter => adapter.provideDocumentRangeFormattingEdits(URI.revive(resource), range, options));
+    }
+    // ### Document Range Formatting Edit end
+
+    // ### On Type Formatting Edit begin
+    registerOnTypeFormattingEditProvider(
+        selector: theia.DocumentSelector,
+        provider: theia.OnTypeFormattingEditProvider,
+        triggerCharacters: string[]
+    ): theia.Disposable {
+        const callId = this.addNewAdapter(new OnTypeFormattingAdapter(provider, this.documents));
+        this.proxy.$registerOnTypeFormattingProvider(callId, this.transformDocumentSelector(selector), triggerCharacters);
+        return this.createDisposable(callId);
+    }
+
+    $provideOnTypeFormattingEdits(handle: number, resource: UriComponents, position: Position, ch: string, options: FormattingOptions): Promise<SingleEditOperation[] | undefined> {
+        return this.withAdapter(handle, OnTypeFormattingAdapter, adapter => adapter.provideOnTypeFormattingEdits(URI.revive(resource), position, ch, options));
+    }
+    // ### On Type Formatting Edit end
+
+    // ### Document Link Provider begin
+    $provideDocumentLinks(handle: number, resource: UriComponents): Promise<DocumentLink[] | undefined> {
+        return this.withAdapter(handle, LinkProviderAdapter, adapter => adapter.provideLinks(URI.revive(resource)));
+    }
+
+    $resolveDocumentLink(handle: number, link: DocumentLink): Promise<DocumentLink | undefined> {
+        return this.withAdapter(handle, LinkProviderAdapter, adapter => adapter.resolveLink(link));
+    }
+
+    registerLinkProvider(selector: theia.DocumentSelector, provider: theia.DocumentLinkProvider): theia.Disposable {
+        const callId = this.addNewAdapter(new LinkProviderAdapter(provider, this.documents));
+        this.proxy.$registerDocumentLinkProvider(callId, this.transformDocumentSelector(selector));
+        return this.createDisposable(callId);
+    }
+    // ### Document Link Provider end
+
+    // ### Code Actions Provider begin
+    registerCodeActionsProvider(selector: theia.DocumentSelector, provider: theia.CodeActionProvider, metadata?: theia.CodeActionProviderMetadata): theia.Disposable {
+        // FIXME: to implement
+        return new Disposable(() => { });
+    }
+    // ### Code Actions Provider end
 }
 
 function serializeEnterRules(rules?: theia.OnEnterRule[]): SerializedOnEnterRule[] | undefined {

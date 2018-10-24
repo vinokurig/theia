@@ -19,6 +19,8 @@ import { injectable, inject } from 'inversify';
 import { WorkspaceService } from '@theia/workspace/lib/browser/workspace-service';
 import { FileSystem, FileStat } from '@theia/filesystem/lib/common';
 import { Event, Emitter } from '@theia/core';
+import { LocalStorageService } from '@theia/core/lib/browser';
+import URI from '@theia/core/lib/common/uri';
 
 export interface GitRefreshOptions {
     readonly maxCount: number
@@ -28,13 +30,16 @@ export interface GitRefreshOptions {
 export class GitRepositoryProvider {
 
     protected _selectedRepository: Repository | undefined;
-    protected _allRepositories: Repository[] = [];
+    protected _allRepositories?: Repository[];
     protected readonly onDidChangeRepositoryEmitter = new Emitter<Repository | undefined>();
+    protected readonly selectedRepoStorageKey = 'theia-git-selected-repository';
+    protected readonly allRepoStorageKey = 'theia-git-all-repositories';
 
     constructor(
         @inject(Git) protected readonly git: Git,
         @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService,
-        @inject(FileSystem) protected readonly fileSystem: FileSystem
+        @inject(FileSystem) protected readonly fileSystem: FileSystem,
+        @inject(LocalStorageService) protected readonly storageService: LocalStorageService
     ) {
         this.initialize();
     }
@@ -43,7 +48,11 @@ export class GitRepositoryProvider {
         this.workspaceService.onWorkspaceChanged(event => {
             this.refresh();
         });
-        await this.refresh({ maxCount: 1 });
+        this._selectedRepository = await this.storageService.getData<Repository | undefined>(this.selectedRepoStorageKey);
+        this._allRepositories = await this.storageService.getData<Repository[]>(this.allRepoStorageKey);
+        if (!this._allRepositories) {
+            await this.refresh({ maxCount: 1 });
+        }
         await this.refresh();
     }
 
@@ -61,6 +70,7 @@ export class GitRepositoryProvider {
      */
     set selectedRepository(repository: Repository | undefined) {
         this._selectedRepository = repository;
+        this.storageService.setData<Repository | undefined>(this.selectedRepoStorageKey, repository);
         this.fireDidChangeRepository();
     }
 
@@ -75,7 +85,30 @@ export class GitRepositoryProvider {
      * Returns with all know repositories.
      */
     get allRepositories(): Repository[] {
-        return this._allRepositories;
+        return this._allRepositories || [];
+    }
+
+    findRepository(uri: URI): Repository | undefined {
+        const reposSorted = this._allRepositories ? this._allRepositories.sort(Repository.sortComparator) : [];
+        return reposSorted.find(repo => new URI(repo.localUri).isEqualOrParent(uri));
+    }
+
+    findRepositoryOrSelected(arg: URI | string | { uri?: string | URI } | undefined): Repository | undefined {
+        let uri: URI | string | undefined;
+        if (arg) {
+            if (arg instanceof URI || typeof arg === 'string') {
+                uri = arg;
+            } else if (typeof arg === 'object' && 'uri' in arg && arg.uri) {
+                uri = arg.uri;
+            }
+            if (uri) {
+                if (typeof uri === 'string') {
+                    uri = new URI(uri);
+                }
+                return this.findRepository(uri);
+            }
+        }
+        return this.selectedRepository;
     }
 
     async refresh(options?: GitRefreshOptions): Promise<void> {
@@ -95,6 +128,7 @@ export class GitRepositoryProvider {
             });
         });
         this._allRepositories = Array.from(repoUris.values());
+        this.storageService.setData<Repository[]>(this.allRepoStorageKey, this._allRepositories);
         const selectedRepository = this._selectedRepository;
         if (!selectedRepository || !this.exists(selectedRepository)) {
             this.selectedRepository = this._allRepositories[0];
@@ -104,7 +138,7 @@ export class GitRepositoryProvider {
     }
 
     protected exists(repository: Repository): boolean {
-        return this._allRepositories.some(repository2 => Repository.equal(repository, repository2));
+        return !!this._allRepositories && this._allRepositories.some(repository2 => Repository.equal(repository, repository2));
     }
 
 }

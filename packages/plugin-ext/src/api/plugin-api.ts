@@ -36,12 +36,15 @@ import {
     FormattingOptions,
     SingleEditOperation as ModelSingleEditOperation,
     Definition,
-    DefinitionLink
+    DefinitionLink,
+    DocumentLink
 } from './model';
 import { CancellationToken, Progress, ProgressOptions } from '@theia/plugin';
 
 export interface PluginInitData {
     plugins: PluginMetadata[];
+    preferences: { [key: string]: any };
+    env: EnvInit;
 }
 
 export interface Plugin {
@@ -50,6 +53,10 @@ export interface Plugin {
     model: PluginModel;
     rawModel: PluginPackage;
     lifecycle: PluginLifecycle;
+}
+
+export interface EnvInit {
+    queryParams: QueryParameters;
 }
 
 export interface PluginAPI {
@@ -306,6 +313,9 @@ export interface QuickOpenMain {
 
 export interface WorkspaceMain {
     $pickWorkspaceFolder(options: WorkspaceFolderPickOptionsMain): Promise<theia.WorkspaceFolder | undefined>;
+    $startFileSearch(includePattern: string, excludePatternOrDisregardExcludes: string | false,
+                     maxResults: number | undefined, token: theia.CancellationToken): PromiseLike<UriComponents[]>;
+
 }
 
 export interface WorkspaceExt {
@@ -598,10 +608,6 @@ export interface EnvMain {
     $getEnvVariable(envVarName: string): Promise<string | undefined>;
 }
 
-export interface EnvExt {
-    $setQueryParameters(queryParams: QueryParameters): void;
-}
-
 export interface PreferenceRegistryMain {
     $updateConfigurationOption(
         target: boolean | ConfigurationTarget | undefined,
@@ -675,6 +681,16 @@ export interface LanguagesExt {
     $provideSignatureHelp(handle: number, resource: UriComponents, position: Position): Promise<SignatureHelp | undefined>;
     $provideHover(handle: number, resource: UriComponents, position: Position): Promise<Hover | undefined>;
     $provideDocumentFormattingEdits(handle: number, resource: UriComponents, options: FormattingOptions): Promise<ModelSingleEditOperation[] | undefined>;
+    $provideDocumentRangeFormattingEdits(handle: number, resource: UriComponents, range: Range, options: FormattingOptions): Promise<ModelSingleEditOperation[] | undefined>;
+    $provideOnTypeFormattingEdits(
+        handle: number,
+        resource: UriComponents,
+        position: Position,
+        ch: string,
+        options: FormattingOptions
+    ): Promise<ModelSingleEditOperation[] | undefined>;
+    $provideDocumentLinks(handle: number, resource: UriComponents): Promise<DocumentLink[] | undefined>;
+    $resolveDocumentLink(handle: number, link: DocumentLink): Promise<DocumentLink | undefined>;
 }
 
 export interface LanguagesMain {
@@ -689,6 +705,9 @@ export interface LanguagesMain {
     $clearDiagnostics(id: string): void;
     $changeDiagnostics(id: string, delta: [UriComponents, MarkerData[]][]): void;
     $registerDocumentFormattingSupport(handle: number, selector: SerializedDocumentFilter[]): void;
+    $registerRangeFormattingProvider(handle: number, selector: SerializedDocumentFilter[]): void;
+    $registerOnTypeFormattingProvider(handle: number, selector: SerializedDocumentFilter[], autoFormatTriggerCharacters: string[]): void;
+    $registerDocumentLinkProvider(handle: number, selector: SerializedDocumentFilter[]): void;
 }
 
 export const PLUGIN_RPC_CONTEXT = {
@@ -719,7 +738,6 @@ export const MAIN_RPC_CONTEXT = {
     TEXT_EDITORS_EXT: createProxyIdentifier<TextEditorsExt>('TextEditorsExt'),
     EDITORS_AND_DOCUMENTS_EXT: createProxyIdentifier<EditorsAndDocumentsExt>('EditorsAndDocumentsExt'),
     DOCUMENTS_EXT: createProxyIdentifier<DocumentsExt>('DocumentsExt'),
-    ENV_EXT: createProxyIdentifier<EnvExt>('EnvExt'),
     TERMINAL_EXT: createProxyIdentifier<TerminalServiceExt>('TerminalServiceExt'),
     PREFERENCE_REGISTRY_EXT: createProxyIdentifier<PreferenceRegistryExt>('PreferenceRegistryExt'),
     LANGUAGES_EXT: createProxyIdentifier<LanguagesExt>('LanguagesExt'),

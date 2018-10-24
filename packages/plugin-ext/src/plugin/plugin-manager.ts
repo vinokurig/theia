@@ -18,8 +18,11 @@ import { PluginManagerExt, PluginInitData, PluginManager, Plugin, PluginAPI } fr
 import { PluginMetadata } from '../common/plugin-protocol';
 import * as theia from '@theia/plugin';
 
+import { join } from 'path';
 import { dispose } from '../common/disposable-util';
 import { Deferred } from '@theia/core/lib/common/promise-util';
+import { EnvExtImpl } from './env';
+import { PreferenceRegistryExtImpl } from './preference-registry';
 
 export interface PluginHost {
 
@@ -46,7 +49,9 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
     private activatedPlugins = new Map<string, ActivatedPlugin>();
     private pluginActivationPromises = new Map<string, Deferred<void>>();
 
-    constructor(private readonly host: PluginHost) {
+    constructor(private readonly host: PluginHost,
+        private readonly envExt: EnvExtImpl,
+        private readonly preferencesManager: PreferenceRegistryExtImpl) {
     }
 
     $stopPlugin(contextPath: string): PromiseLike<void> {
@@ -65,6 +70,11 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
     }
 
     $init(pluginInit: PluginInitData): PromiseLike<void> {
+        // init query parameters
+        this.envExt.setQueryParameters(pluginInit.env.queryParams);
+
+        this.preferencesManager.init(pluginInit.preferences);
+
         const [plugins, foreignPlugins] = this.host.init(pluginInit.plugins);
         // add foreign plugins
         for (const plugin of foreignPlugins) {
@@ -77,7 +87,12 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
         // run plugins
         for (const plugin of plugins) {
             const pluginMain = this.host.loadPlugin(plugin);
-            this.startPlugin(plugin, pluginMain);
+            // able to load the plug-in ?
+            if (pluginMain !== undefined) {
+                this.startPlugin(plugin, pluginMain);
+            } else {
+                return Promise.reject(new Error('Unable to load the given plugin'));
+            }
         }
 
         return Promise.resolve();
@@ -88,8 +103,11 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
 
         // Create pluginContext object for this plugin.
         const subscriptions: theia.Disposable[] = [];
+        const asAbsolutePath = (relativePath: string): string => join(plugin.pluginFolder, relativePath);
         const pluginContext: theia.PluginContext = {
-            subscriptions: subscriptions
+            extensionPath: plugin.pluginFolder,
+            subscriptions: subscriptions,
+            asAbsolutePath: asAbsolutePath
         };
 
         let stopFn = undefined;
@@ -106,7 +124,7 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
                 this.pluginActivationPromises.delete(plugin.model.id);
             }
         } else {
-            console.log('there is no doStart method on plugin');
+            console.log(`There is no ${plugin.lifecycle.startMethod} method on plugin`);
         }
     }
 

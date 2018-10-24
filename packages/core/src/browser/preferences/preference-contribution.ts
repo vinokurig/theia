@@ -35,16 +35,21 @@ export interface PreferenceSchema {
     }
 }
 
-export interface PreferenceProperty {
-    description: string;
+export interface PreferenceItem {
     type?: JsonType | JsonType[];
     minimum?: number;
     // tslint:disable-next-line:no-any
     default?: any;
     enum?: string[];
+    items?: PreferenceItem;
+    properties?: { [name: string]: PreferenceItem };
     additionalProperties?: object;
     // tslint:disable-next-line:no-any
     [name: string]: any;
+}
+
+export interface PreferenceProperty extends PreferenceItem {
+    description: string;
 }
 
 export type JsonType = 'string' | 'array' | 'number' | 'integer' | 'object' | 'boolean' | 'null';
@@ -59,29 +64,38 @@ export class PreferenceSchemaProvider extends PreferenceProvider {
 
     protected readonly combinedSchema: PreferenceSchema = { properties: {} };
     protected readonly preferences: { [name: string]: any } = {};
-    protected readonly validateFunction: Ajv.ValidateFunction;
+    protected validateFunction: Ajv.ValidateFunction;
 
     constructor(
         @inject(ContributionProvider) @named(PreferenceContribution)
         protected readonly preferenceContributions: ContributionProvider<PreferenceContribution>
     ) {
         super();
-        const schema = this.combinedSchema;
         this.preferenceContributions.getContributions().forEach(contrib => {
-            for (const property in contrib.schema.properties) {
-                if (schema.properties[property]) {
-                    console.error('Preference name collision detected in the schema for property: ' + property);
-                } else {
-                    schema.properties[property] = contrib.schema.properties[property];
-                }
-            }
+            this.doSetSchema(contrib.schema);
         });
-        this.validateFunction = new Ajv().compile(schema);
-        // tslint:disable-next-line:forin
-        for (const property in schema.properties) {
-            this.preferences[property] = schema.properties[property].default;
-        }
+        this.updateValidate();
         this._ready.resolve();
+    }
+
+    protected doSetSchema(schema: PreferenceSchema): void {
+        const props: string[] = [];
+        for (const property in schema.properties) {
+            if (this.combinedSchema.properties[property]) {
+                console.error('Preference name collision detected in the schema for property: ' + property);
+            } else {
+                this.combinedSchema.properties[property] = schema.properties[property];
+                props.push(property);
+            }
+        }
+        // tslint:disable-next-line:forin
+        for (const property of props) {
+            this.preferences[property] = this.combinedSchema.properties[property].default;
+        }
+    }
+
+    protected updateValidate(): void {
+        this.validateFunction = new Ajv().compile(this.combinedSchema);
     }
 
     validate(name: string, value: any): boolean {
@@ -94,6 +108,11 @@ export class PreferenceSchemaProvider extends PreferenceProvider {
 
     getPreferences(): { [name: string]: any } {
         return this.preferences;
+    }
+
+    setSchema(schema: PreferenceSchema): void {
+        this.doSetSchema(schema);
+        this.updateValidate();
     }
 
     async setPreference(): Promise<void> {

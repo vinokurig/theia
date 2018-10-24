@@ -23,6 +23,8 @@ import URI from '@theia/core/lib/common/uri';
 import { GitHistoryWidget } from './git-history-widget';
 import { Git } from '../../common';
 import { GitRepositoryTracker } from '../git-repository-tracker';
+import { GitRepositoryProvider } from '../git-repository-provider';
+import { EDITOR_CONTEXT_MENU_GIT } from '../git-view-contribution';
 
 export namespace GitHistoryCommands {
     export const OPEN_FILE_HISTORY: Command = {
@@ -43,6 +45,8 @@ export class GitHistoryContribution extends AbstractViewContribution<GitHistoryW
     protected readonly selectionService: SelectionService;
     @inject(GitRepositoryTracker)
     protected readonly repositoryTracker: GitRepositoryTracker;
+    @inject(GitRepositoryProvider)
+    protected readonly repositoryProvider: GitRepositoryProvider;
 
     constructor() {
         super({
@@ -59,8 +63,9 @@ export class GitHistoryContribution extends AbstractViewContribution<GitHistoryW
 
     @postConstruct()
     protected init() {
-        this.repositoryTracker.onDidChangeRepository(async repository =>
-            this.refreshWidget(repository ? repository.localUri : undefined)
+        this.repositoryTracker.onDidChangeRepository(async repository => {
+            this.refreshWidget(repository ? repository.localUri : undefined);
+        }
         );
         this.repositoryTracker.onGitEvent(event => {
             const { source, status, oldStatus } = event;
@@ -80,13 +85,16 @@ export class GitHistoryContribution extends AbstractViewContribution<GitHistoryW
         menus.registerMenuAction([...NAVIGATOR_CONTEXT_MENU, '5_history'], {
             commandId: GitHistoryCommands.OPEN_FILE_HISTORY.id
         });
-
+        menus.registerMenuAction(EDITOR_CONTEXT_MENU_GIT, {
+            commandId: GitHistoryCommands.OPEN_FILE_HISTORY.id
+        });
         super.registerMenus(menus);
     }
 
     registerCommands(commands: CommandRegistry): void {
         commands.registerCommand(GitHistoryCommands.OPEN_FILE_HISTORY, this.newUriAwareCommandHandler({
-            execute: async uri => this.showWidget(uri.toString())
+            execute: async uri => this.showWidget(uri.toString()),
+            isEnabled: (uri: URI) => !!this.repositoryProvider.findRepository(uri)
         }));
         commands.registerCommand(GitHistoryCommands.OPEN_BRANCH_HISTORY, {
             execute: () => this.showWidget(undefined)

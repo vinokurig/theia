@@ -24,11 +24,13 @@ import {
     MarkerData,
     RelatedInformation,
     Location,
-    DefinitionLink
+    DefinitionLink,
+    DocumentLink
 } from '../api/model';
 import * as theia from '@theia/plugin';
 import * as types from './types-impl';
 import { LanguageSelector, LanguageFilter, RelativePattern } from './languages';
+import { isMarkdownString } from './markdown-string';
 
 export function toViewColumn(ep?: EditorPosition): theia.ViewColumn | undefined {
     if (typeof ep !== 'number') {
@@ -73,20 +75,6 @@ export function toRange(range: Range): types.Range {
 }
 
 export function fromRange(range: theia.Range | undefined): Range | undefined {
-    if (!range) {
-        return undefined;
-    }
-    const { start, end } = range;
-    return {
-        startLineNumber: start.line,
-        startColumn: start.character + 1,
-        endLineNumber: end.line,
-        endColumn: end.character + 1
-    };
-}
-
-// TODO make this primary converter, see https://github.com/theia-ide/theia/issues/2910
-export function fromRange_(range: theia.Range | undefined): Range | undefined {
     if (!range) {
         return undefined;
     }
@@ -159,17 +147,6 @@ function isCodeblock(thing: any): thing is Codeblock {
     return thing && typeof thing === 'object'
         && typeof (<Codeblock>thing).language === 'string'
         && typeof (<Codeblock>thing).value === 'string';
-}
-
-// tslint:disable-next-line:no-any
-export function isMarkdownString(thing: any): thing is MarkdownString {
-    if (thing instanceof types.MarkdownString) {
-        return true;
-    } else if (thing && typeof thing === 'object') {
-        return typeof (<MarkdownString>thing).value === 'string'
-            && (typeof (<MarkdownString>thing).isTrusted === 'boolean' || (<MarkdownString>thing).isTrusted === void 0);
-    }
-    return false;
 }
 
 export function fromMarkdown(markup: theia.MarkdownString | theia.MarkedString): MarkdownString {
@@ -381,15 +358,22 @@ export function fromHover(hover: theia.Hover): Hover {
 export function fromLocation(location: theia.Location): Location {
     return <Location>{
         uri: location.uri,
-        range: fromRange_(location.range)
+        range: fromRange(location.range)
     };
 }
 
 export function fromDefinitionLink(definitionLink: theia.DefinitionLink): DefinitionLink {
     return <DefinitionLink>{
         uri: definitionLink.targetUri,
-        range: fromRange_(definitionLink.targetRange),
-        origin: definitionLink.originSelectionRange ? fromRange_(definitionLink.originSelectionRange) : undefined,
-        selectionRange: definitionLink.targetSelectionRange ? fromRange_(definitionLink.targetSelectionRange) : undefined
+        range: fromRange(definitionLink.targetRange),
+        origin: definitionLink.originSelectionRange ? fromRange(definitionLink.originSelectionRange) : undefined,
+        selectionRange: definitionLink.targetSelectionRange ? fromRange(definitionLink.targetSelectionRange) : undefined
+    };
+}
+
+export function fromDocumentLink(definitionLink: theia.DocumentLink): DocumentLink {
+    return <DocumentLink>{
+        range: fromRange(definitionLink.range),
+        url: definitionLink.target && definitionLink.target.toString()
     };
 }

@@ -16,12 +16,14 @@
 
 import { injectable, inject } from 'inversify';
 import {
+    Emitter,
+    Event,
     Message,
     MessageClient,
     MessageType,
     ProgressMessage,
     ProgressMessageArguments, ProgressToken, ProgressUpdate
-} from '@theia/core/lib/common';
+} from '@theia/core';
 import { NotificationAction, NotificationProperties, Notifications } from './notifications';
 import { NotificationPreferences } from './notification-preferences';
 
@@ -48,6 +50,11 @@ export class NotificationsMessageClient extends MessageClient {
             }));
         this.visibleProgressMessages.set(key, progressNotification);
         return Promise.resolve({id: key});
+    }
+
+    private onProgressCanceledEmitter: Emitter<string> = new Emitter();
+    onProgressCanceled(): Event<string> {
+        return this.onProgressCanceledEmitter.event;
     }
 
     stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
@@ -118,7 +125,8 @@ export class NotificationsMessageClient extends MessageClient {
             icon,
             text,
             actions,
-            timeout
+            timeout,
+            onTimeout: () => onCloseFn(undefined)
         };
     }
 

@@ -93,7 +93,7 @@ export class MarkdownPreviewHandler implements PreviewHandler {
         const linkURI = new URI(link);
         if (!linkURI.path.isAbsolute && (
             !(linkURI.scheme || linkURI.authority) ||
-            (linkURI.scheme === uri.scheme && linkURI.authority === linkURI.authority)
+            (linkURI.scheme === uri.scheme && linkURI.authority === uri.authority)
         )) {
             const resolvedUri = uri.parent.resolve(linkURI.path).withFragment(linkURI.fragment).withQuery(linkURI.query);
             return preview ? PreviewUri.encode(resolvedUri) : resolvedUri;
@@ -123,7 +123,7 @@ export class MarkdownPreviewHandler implements PreviewHandler {
             }
         };
         const treeWalker = document.createTreeWalker(content, NodeFilter.SHOW_ELEMENT, filter, false);
-        while (treeWalker.nextNode()) {
+        if (treeWalker.nextNode()) {
             const element = treeWalker.currentNode as HTMLElement;
             return element;
         }

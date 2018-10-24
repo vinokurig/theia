@@ -23,7 +23,7 @@ import { AutoSizer, List, ListRowRenderer, ListRowProps, InfiniteLoader, IndexRa
 import { GIT_RESOURCE_SCHEME } from '../git-resource';
 import URI from '@theia/core/lib/common/uri';
 import { GIT_HISTORY, GIT_HISTORY_MAX_COUNT } from './git-history-contribution';
-import { GitFileStatus, Git, GitFileChange } from '../../common';
+import { GitFileStatus, Git, GitFileChange, Repository } from '../../common';
 import { FileSystem } from '@theia/filesystem/lib/common';
 import { GitDiffContribution } from '../diff/git-diff-contribution';
 import { GitAvatarService } from './git-avatar-service';
@@ -57,7 +57,7 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
     protected listView: GitHistoryList | undefined;
     protected hasMoreCommits: boolean;
     protected allowScrollToSelected: boolean;
-    protected pathIsUnderVersionControl: boolean;
+    protected errorMessage: React.ReactNode;
 
     constructor(
         @inject(OpenerService) protected readonly openerService: OpenerService,
@@ -72,6 +72,8 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
         this.id = GIT_HISTORY;
         this.scrollContainer = 'git-history-list-container';
         this.title.label = 'Git History';
+        this.title.caption = 'Git History';
+        this.title.iconClass = 'fa git-history-tab-icon';
         this.addClass('theia-git');
         this.resetState();
         this.cancelIndicator = new CancellationTokenSource();
@@ -79,17 +81,13 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
 
     protected onAfterAttach(msg: Message): void {
         super.onAfterAttach(msg);
+        this.addGitListNavigationKeyListeners(this.node);
         this.addEventListener<any>(this.node, 'ps-scroll-y', (e: Event & { target: { scrollTop: number } }) => {
             if (this.listView && this.listView.list && this.listView.list.Grid) {
                 const { scrollTop } = e.target;
                 this.listView.list.Grid.handleScrollEvent({ scrollTop });
             }
         });
-    }
-
-    protected onActivateRequest(msg: Message): void {
-        super.onActivateRequest(msg);
-        this.update();
     }
 
     update(): void {
@@ -122,14 +120,19 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
     }
 
     protected async addCommits(options?: Git.Options.Log): Promise<void> {
-        const repository = this.repositoryProvider.selectedRepository;
+        let repository: Repository | undefined;
+        repository = this.repositoryProvider.findRepositoryOrSelected(options);
         let resolver: () => void;
-
+        this.errorMessage = undefined;
         this.cancelIndicator.cancel();
         this.cancelIndicator = new CancellationTokenSource();
         const token = this.cancelIndicator.token;
         if (repository) {
             const log = this.git.log(repository, options);
+            log.catch((reason: Error) => {
+                this.errorMessage = reason.message;
+                resolver();
+            });
             log.then(async changes => {
                 if (token.isCancellationRequested || !this.hasMoreCommits) {
                     return;
@@ -161,14 +164,18 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
                         });
                     }
                     this.commits.push(...commits);
-                } else if (options && options.uri) {
-                    this.pathIsUnderVersionControl = await this.git.lsFiles(repository, options.uri, { errorUnmatch: true });
+                } else if (options && options.uri && repository) {
+                    const pathIsUnderVersionControl = await this.git.lsFiles(repository, options.uri, { errorUnmatch: true });
+                    if (!pathIsUnderVersionControl) {
+                        this.errorMessage = <React.Fragment>It is not under version control.</React.Fragment>;
+                    }
                 }
                 resolver();
             });
         } else {
             setTimeout(() => {
                 this.commits = [];
+                this.errorMessage = <React.Fragment>There is no repository selected in this workspace.</React.Fragment>;
                 resolver();
             });
         }
@@ -237,18 +244,20 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
                 {this.renderHistoryHeader()}
                 {this.renderCommitList()}
             </React.Fragment>;
-        } else if (this.ready) {
+        } else if (this.errorMessage) {
             let path: React.ReactNode = '';
-            let notInVC: React.ReactNode;
+            let reason: React.ReactNode;
+            reason = this.errorMessage;
             if (this.options.uri) {
                 const relPath = this.relativePath(this.options.uri);
-                path = <React.Fragment> for <i>/{relPath}</i></React.Fragment>;
-                notInVC = !this.pathIsUnderVersionControl ? <div><i>/{relPath}</i> is not under version control.</div> : '';
+                const repo = this.repositoryProvider.findRepository(new URI(this.options.uri));
+                const repoName = repo ? ` in ${new URI(repo.localUri).displayName}` : '';
+                path = <React.Fragment> for <i>/{decodeURIComponent(relPath)}</i>{repoName}</React.Fragment>;
             }
             content = <div className='message-container'>
                 <div className='no-history-message'>
                     <div>There is no Git history available{path}.</div>
-                    {notInVC}
+                    <div>{reason}</div>
                 </div>
             </div>;
         } else {
@@ -266,16 +275,10 @@ export class GitHistoryWidget extends GitNavigableListWidget<GitHistoryListNode>
             const path = this.relativePath(this.options.uri);
             return <div className='diff-header'>
                 {
-                    path.length > 0 ?
-                        <div className='header-row'>
-                            <div className='theia-header'>
-                                path:
-                                </div>
-                            <div className='header-value'>
-                                {'/' + path}
-                            </div>
-                        </div>
-                        : ''
+                    this.renderHeaderRow({ name: 'repository', value: this.getRepositoryLabel(this.options.uri) })
+                }
+                {
+                    this.renderHeaderRow({ name: 'path', value: path })
                 }
                 <div className='theia-header'>
                     Commits

@@ -36,7 +36,6 @@ import {
     TextEditorSelectionChangeKind,
     EndOfLine,
     SnippetString,
-    MarkdownString,
     ThemeColor,
     TextEditorRevealType,
     TextEditorLineNumbersStyle,
@@ -61,7 +60,13 @@ import {
     ParameterInformation,
     SignatureInformation,
     SignatureHelp,
-    Hover
+    Hover,
+    DocumentLink,
+    CodeLens,
+    CodeActionKind,
+    CodeActionTrigger,
+    TextDocumentSaveReason,
+    CodeAction,
 } from './types-impl';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
 import { TextEditorsExtImpl } from './text-editors';
@@ -77,8 +82,15 @@ import { DialogsExtImpl } from './dialogs';
 import { Thenable } from 'es6-promise';
 import { NotificationExtImpl } from './notification';
 import { StatusBarExtImpl } from './statusBar';
+import { CancellationToken } from '@theia/core/lib/common/cancellation';
+import { MarkdownString } from './markdown-string';
 
-export function createAPIFactory(rpc: RPCProtocol, pluginManager: PluginManager): PluginAPIFactory {
+export function createAPIFactory(
+    rpc: RPCProtocol,
+    pluginManager: PluginManager,
+    envExt: EnvExtImpl,
+    preferenceRegistryExt: PreferenceRegistryExtImpl): PluginAPIFactory {
+
     const commandRegistryExt = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
     const quickOpenExt = rpc.set(MAIN_RPC_CONTEXT.QUICK_OPEN_EXT, new QuickOpenExtImpl(rpc));
     const dialogsExt = new DialogsExtImpl(rpc);
@@ -92,8 +104,6 @@ export function createAPIFactory(rpc: RPCProtocol, pluginManager: PluginManager)
     const workspaceExt = rpc.set(MAIN_RPC_CONTEXT.WORKSPACE_EXT, new WorkspaceExtImpl(rpc));
     const statusBarMessageRegistryExt = new StatusBarMessageRegistryExt(rpc);
     const terminalExt = rpc.set(MAIN_RPC_CONTEXT.TERMINAL_EXT, new TerminalServiceExtImpl(rpc));
-    const envExt = rpc.set(MAIN_RPC_CONTEXT.ENV_EXT, new EnvExtImpl(rpc));
-    const preferenceRegistryExt = rpc.set(MAIN_RPC_CONTEXT.PREFERENCE_REGISTRY_EXT, new PreferenceRegistryExtImpl(rpc));
     const outputChannelRegistryExt = new OutputChannelRegistryExt(rpc);
     const languagesExt = rpc.set(MAIN_RPC_CONTEXT.LANGUAGES_EXT, new LanguagesExtImpl(rpc, documents));
 
@@ -255,6 +265,11 @@ export function createAPIFactory(rpc: RPCProtocol, pluginManager: PluginManager)
             onDidOpenTextDocument(listener, thisArg?, disposables?) {
                 return documents.onDidAddDocument(listener, thisArg, disposables);
             },
+
+            onDidSaveTextDocument(listener, thisArg?, disposables?) {
+                return documents.onDidSaveTextDocument(listener, thisArg, disposables);
+            },
+
             getConfiguration(section?, resource?): theia.WorkspaceConfiguration {
                 return preferenceRegistryExt.getConfiguration(section, resource);
             },
@@ -280,6 +295,15 @@ export function createAPIFactory(rpc: RPCProtocol, pluginManager: PluginManager)
                         const data = documents.getDocumentData(uri);
                         return data && data.document;
                     }));
+            },
+            createFileSystemWatcher(globPattern: theia.GlobPattern,
+                ignoreCreateEvents?: boolean,
+                ignoreChangeEvents?: boolean,
+                ignoreDeleteEvents?: boolean): theia.FileSystemWatcher {
+                return workspaceExt.createFileSystemWatcher(globPattern, ignoreCreateEvents, ignoreChangeEvents, ignoreDeleteEvents);
+            },
+            findFiles(include: theia.GlobPattern, exclude?: theia.GlobPattern | undefined, maxResults?: number, token?: CancellationToken): PromiseLike<Uri[]> {
+                return workspaceExt.findFiles(include, undefined, maxResults, token);
             }
         };
 
@@ -329,7 +353,25 @@ export function createAPIFactory(rpc: RPCProtocol, pluginManager: PluginManager)
             },
             registerDocumentFormattingEditProvider(selector: theia.DocumentSelector, provider: theia.DocumentFormattingEditProvider): theia.Disposable {
                 return languagesExt.registerDocumentFormattingEditProvider(selector, provider);
+            },
+            registerDocumentRangeFormattingEditProvider(selector: theia.DocumentSelector, provider: theia.DocumentRangeFormattingEditProvider): theia.Disposable {
+                return languagesExt.registerDocumentRangeFormattingEditProvider(selector, provider);
+            },
+            registerOnTypeFormattingEditProvider(
+                selector: theia.DocumentSelector,
+                provider: theia.OnTypeFormattingEditProvider,
+                firstTriggerCharacter: string,
+                ...moreTriggerCharacters: string[]
+            ): theia.Disposable {
+                return languagesExt.registerOnTypeFormattingEditProvider(selector, provider, [firstTriggerCharacter].concat(moreTriggerCharacters));
+            },
+            registerDocumentLinkProvider(selector: theia.DocumentSelector, provider: theia.DocumentLinkProvider): theia.Disposable {
+                return languagesExt.registerLinkProvider(selector, provider);
+            },
+            registerCodeActionsProvider(selector: theia.DocumentSelector, provider: theia.CodeActionProvider, metadata?: theia.CodeActionProviderMetadata): theia.Disposable {
+                return languagesExt.registerCodeActionsProvider(selector, provider, metadata);
             }
+
         };
 
         const plugins: typeof theia.plugins = {
@@ -393,6 +435,12 @@ export function createAPIFactory(rpc: RPCProtocol, pluginManager: PluginManager)
             SignatureInformation,
             SignatureHelp,
             Hover,
+            DocumentLink,
+            CodeLens,
+            CodeActionKind,
+            CodeActionTrigger,
+            TextDocumentSaveReason,
+            CodeAction,
         };
     };
 }

@@ -21,7 +21,7 @@ import { injectable } from 'inversify';
 export class LessContribution implements LanguageGrammarDefinitionContribution {
 
     readonly id = 'less';
-    readonly scopeName = 'source.less';
+    readonly scopeName = 'source.css.less';
 
     registerTextmateLanguage(registry: TextmateRegistry) {
         monaco.languages.register({

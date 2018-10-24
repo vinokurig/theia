@@ -18,6 +18,7 @@ import { RPCProtocol } from '../api/rpc-protocol';
 import { Disposable } from '@theia/core/lib/common/disposable';
 import { LogPart } from './types';
 import { CharacterPair, CommentRule, PluginAPIFactory, Plugin } from '../api/plugin-api';
+import { PreferenceSchema } from '@theia/core/lib/browser/preferences';
 
 export const hostedServicePath = '/services/hostedPlugin';
 
@@ -51,6 +52,7 @@ export interface PluginPackage {
  * This interface describes a package.json contribution section object.
  */
 export interface PluginPackageContribution {
+    configuration: PreferenceSchema;
     languages?: PluginPackageLanguageContribution[];
     grammars?: PluginPackageGrammarsContribution[];
     viewsContainers?: { [location: string]: PluginPackageViewContainer[] };
@@ -65,13 +67,13 @@ export interface PluginPackageViewContainer {
 }
 
 export interface PluginPackageView {
-	id: string;
-	name: string;
+    id: string;
+    name: string;
 }
 
 export interface PluginPackageMenu {
-	command: string;
-	group?: string;
+    command: string;
+    group?: string;
 }
 
 export interface PluginPackageGrammarsContribution {
@@ -293,6 +295,7 @@ export interface PluginModel {
  * This interface describes some static plugin contributions.
  */
 export interface PluginContribution {
+    configuration?: PreferenceSchema;
     languages?: LanguageContribution[];
     grammars?: GrammarsContribution[];
     viewsContainers?: { [location: string]: ViewContainer[] };
@@ -372,16 +375,16 @@ export interface ViewContainer {
  * View contribution
  */
 export interface View {
-	id: string;
-	name: string;
+    id: string;
+    name: string;
 }
 
 /**
  * Menu contribution
  */
 export interface Menu {
-	command: string;
-	group?: string;
+    command: string;
+    group?: string;
 }
 
 /**
@@ -424,9 +427,15 @@ export interface ExtensionContext {
 }
 
 export interface PluginMetadata {
+    host: string;
     source: PluginPackage;
     model: PluginModel;
     lifecycle: PluginLifecycle;
+}
+
+export const MetadataProcessor = Symbol('MetadataProcessor');
+export interface MetadataProcessor {
+    process(pluginMetadata: PluginMetadata): void;
 }
 
 export function getPluginId(plugin: PluginPackage | PluginModel): string {
@@ -435,6 +444,11 @@ export function getPluginId(plugin: PluginPackage | PluginModel): string {
 
 export function buildFrontendModuleName(plugin: PluginPackage | PluginModel): string {
     return `${plugin.publisher}_${plugin.name}`.replace(/\W/g, '_');
+}
+
+export interface DebugConfiguration {
+    port?: number;
+    debugMode?: string;
 }
 
 export const HostedPluginClient = Symbol('HostedPluginClient');
@@ -458,6 +472,7 @@ export interface HostedPluginServer extends JsonRpcServer<HostedPluginClient> {
 
     isPluginValid(uri: string): Promise<boolean>;
     runHostedPluginInstance(uri: string): Promise<string>;
+    runDebugHostedPluginInstance(uri: string, debugConfig: DebugConfiguration): Promise<string>;
     terminateHostedPluginInstance(): Promise<void>;
     isHostedPluginInstanceRunning(): Promise<boolean>;
     getHostedPluginInstanceURI(): Promise<string>;
@@ -479,4 +494,12 @@ export interface PluginServer {
      * Deploy a plugin
      */
     deploy(pluginEntry: string): Promise<void>
+}
+
+export const ServerPluginRunner = Symbol('ServerPluginRunner');
+export interface ServerPluginRunner {
+    acceptMessage(jsonMessage: any): boolean;
+    onMessage(jsonMessage: any): void;
+    setClient(client: HostedPluginClient): void;
+    setDefault(defaultRunner: ServerPluginRunner): void;
 }

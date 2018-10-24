@@ -16,7 +16,7 @@
 
 import { injectable, inject } from 'inversify';
 import { ILogger } from './logger';
-import { Event } from '../common/event';
+import { Event, Emitter } from '../common';
 
 export const messageServicePath = '/services/messageService';
 
@@ -70,6 +70,9 @@ export class MessageClient {
 
     newProgress(message: ProgressMessageArguments): Promise<ProgressToken| undefined> {
         return Promise.resolve(undefined);
+    }
+    onProgressCanceled(): Event<string> {
+        return new Emitter<string>().event;
     }
     stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
         return Promise.resolve(undefined);

@@ -32,36 +32,41 @@ export class NotificationMainImpl implements NotificationMain, Disposable {
     }
 
     $startProgress(message: string): void {
-        const notification = this.messageService.getOrCreateProgressMessage(message);
+        const notification = this.messageService.newProgress({text: message});
         if (!notification) {
             return;
         }
-        notification.show();
-        this.disposableCollection.push(notification.onCancel(() => {
-            this.proxy.$onCancel();
-            this.dispose();
-        }));
+        notification.then(id => {
+            this.disposableCollection.push(this.messageService.onProgressCanceled(() => {
+                this.proxy.$onCancel();
+                this.dispose();
+            }));
+        });
+        // this.disposableCollection.push(notification.onCancel(() => {
+        //     this.proxy.$onCancel();
+        //     this.dispose();
+        // }));
     }
 
     $stopProgress(message: string): void {
-        const notification = this.messageService.getOrCreateProgressMessage(message);
-        if (!notification) {
-            return;
-        }
-        if (notification) {
-            notification.close();
-            this.disposableCollection.dispose();
-        }
+        // const notification = this.messageService.getOrCreateProgressMessage(message);
+        // if (!notification) {
+        //     return;
+        // }
+        // if (notification) {
+        //     notification.close();
+        //     this.disposableCollection.dispose();
+        // }
     }
 
     $updateProgress(message: string, item: { message?: string, increment?: number }): void {
-        const notification = this.messageService.getOrCreateProgressMessage(message);
-        if (!notification) {
-            return;
-        }
-        if (notification) {
-            notification.update(item);
-        }
+        // const notification = this.messageService.getOrCreateProgressMessage(message);
+        // if (!notification) {
+        //     return;
+        // }
+        // if (notification) {
+        //     notification.update(item);
+        // }
     }
 
     dispose(): void {

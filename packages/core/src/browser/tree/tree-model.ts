@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import { inject, injectable, postConstruct } from 'inversify';
-import { DisposableCollection, Event, Emitter, SelectionProvider } from '../../common';
+import { DisposableCollection, Event, Emitter, SelectionProvider, ILogger } from '../../common';
 import { Tree, TreeNode, CompositeTreeNode } from './tree';
 import { TreeSelectionService, SelectableTreeNode, TreeSelection } from './tree-selection';
 import { TreeExpansionService, ExpandableTreeNode } from './tree-expansion';
@@ -42,6 +42,12 @@ export interface TreeModel extends Tree, TreeSelectionService, TreeExpansionServ
     collapseNode(node?: Readonly<ExpandableTreeNode>): Promise<boolean>;
 
     /**
+     * Collapses recursively. If the `node` argument is `undefined`, then collapses the currently selected tree node.
+     * If multiple tree nodes are selected, collapses the most recently selected tree node.
+     */
+    collapseAll(node?: Readonly<CompositeTreeNode>): Promise<boolean>;
+
+    /**
      * Toggles the expansion state of the given node. If not give, then it toggles the expansion state of the currently selected node.
      * If multiple nodes are selected, then the most recently selected tree node's expansion state will be toggled.
      */
@@ -64,10 +70,11 @@ export interface TreeModel extends Tree, TreeSelectionService, TreeExpansionServ
     selectParent(): void;
 
     /**
-     * Navigates to the given node if it is defined.
-     * Navigation sets a node as a root node and expand it.
+     * Navigates to the given node if it is defined. This method accepts both the tree node and its ID as an argument.
+     * Navigation sets a node as a root node and expand it. Resolves to the node if the navigation was successful. Otherwise,
+     * resolves to `undefined`.
      */
-    navigateTo(node: Readonly<TreeNode> | undefined): Promise<void>;
+    navigateTo(nodeOrId: Readonly<TreeNode> | string | undefined): Promise<TreeNode | undefined>;
     /**
      * Tests whether it is possible to navigate forward.
      */
@@ -129,6 +136,7 @@ export interface TreeModel extends Tree, TreeSelectionService, TreeExpansionServ
 @injectable()
 export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray<Readonly<SelectableTreeNode>>> {
 
+    @inject(ILogger) protected readonly logger: ILogger;
     @inject(Tree) protected readonly tree: Tree;
     @inject(TreeSelectionService) protected readonly selectionService: TreeSelectionService;
     @inject(TreeExpansionService) protected readonly expansionService: TreeExpansionService;
@@ -235,6 +243,17 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
         return false;
     }
 
+    async collapseAll(raw?: Readonly<CompositeTreeNode>): Promise<boolean> {
+        const node = raw || this.selectedNodes[0];
+        if (SelectableTreeNode.is(node)) {
+            this.selectNode(node);
+        }
+        if (CompositeTreeNode.is(node)) {
+            return await this.expansionService.collapseAll(node);
+        }
+        return false;
+    }
+
     async toggleNodeExpansion(raw?: Readonly<ExpandableTreeNode>): Promise<void> {
         for (const node of raw ? [raw] : this.selectedNodes) {
             if (ExpandableTreeNode.is(node)) {
@@ -327,11 +346,16 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
         }
     }
 
-    async navigateTo(node: TreeNode | undefined): Promise<void> {
-        if (node) {
-            this.navigationService.push(node);
-            await this.doNavigate(node);
+    async navigateTo(nodeOrId: TreeNode | string | undefined): Promise<TreeNode | undefined> {
+        if (nodeOrId) {
+            const node = typeof nodeOrId === 'string' ? this.getNode(nodeOrId) : nodeOrId;
+            if (node) {
+                this.navigationService.push(node);
+                await this.doNavigate(node);
+                return node;
+            }
         }
+        return undefined;
     }
 
     canNavigateForward(): boolean {

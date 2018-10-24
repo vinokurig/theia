@@ -14,13 +14,19 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-const path = require('path');
-const packageJson = require('../../package.json');
-const debugAdapterDir = packageJson['debugAdapter']['dir'];
-
 import { injectable } from 'inversify';
-import { DebugConfiguration } from '@theia/debug/lib/common/debug-common';
+import { DebugConfiguration } from '@theia/debug/lib/common/debug-configuration';
 import { DebugAdapterContribution, DebugAdapterExecutable } from '@theia/debug/lib/node/debug-model';
+import { IJSONSchema } from '@theia/core/lib/common/json-schema';
+import { getSchemaAttributes } from './package-json-parser';
+
+const path = require('path'); // FIXME use import
+const packageJson = require('../../package.json');
+const debugAdapterDir = packageJson['debugAdapter']['dir'] + '/extension';
+const psList = require('ps-list'); // FIXME use import, provide proper d.ts file instead of any
+const DEBUG_PORT_PATTERN = /--(inspect|debug)-port=(\d+)/;
+const DEFAULT_PROTOCOL = 'inspector';
+const DEFAULT_INSPECTOR_PORT = 9229;
 
 @injectable()
 export class NodeJsDebugAdapterContribution implements DebugAdapterContribution {
@@ -29,23 +35,27 @@ export class NodeJsDebugAdapterContribution implements DebugAdapterContribution 
     provideDebugConfigurations = [{
         type: this.debugType,
         request: 'attach',
-        name: 'Attach by PID',
+        name: 'Debug (Attach)',
         processId: ''
     }];
 
-    resolveDebugConfiguration(config: DebugConfiguration): DebugConfiguration {
+    getSchemaAttributes(): Promise<IJSONSchema[]> {
+        return getSchemaAttributes(path.join(__dirname, `../../${debugAdapterDir}`), this.debugType);
+    }
+    async resolveDebugConfiguration(config: DebugConfiguration): Promise<DebugConfiguration> {
         if (!config.request) {
             throw new Error('Debug request type is not provided.');
         }
 
         switch (config.request) {
-            case 'attach': this.validateAttachConfig(config);
+            case 'attach': return this.resolveAttachConfiguration(config);
+            case 'launch': return this.resolveLaunchConfiguration(config);
         }
 
-        return config;
+        throw new Error(`Unknown request type ${config.request}`);
     }
 
-    provideDebugAdapterExecutable(config: DebugConfiguration): DebugAdapterExecutable {
+    async provideDebugAdapterExecutable(config: DebugConfiguration): Promise<DebugAdapterExecutable> {
         const program = path.join(__dirname, `../../${debugAdapterDir}/out/src/nodeDebug.js`);
         return {
             program,
@@ -53,9 +63,28 @@ export class NodeJsDebugAdapterContribution implements DebugAdapterContribution 
         };
     }
 
-    private validateAttachConfig(config: DebugConfiguration) {
-        if (!config.processId) {
-            throw new Error('PID is not provided.');
+    private async resolveLaunchConfiguration(config: DebugConfiguration): Promise<DebugConfiguration> {
+        return config;
+    }
+
+    private async resolveAttachConfiguration(config: DebugConfiguration): Promise<DebugConfiguration> {
+        config.protocol = DEFAULT_PROTOCOL;
+        config.port = DEFAULT_INSPECTOR_PORT;
+
+        const pidToDebug = Number.parseInt(config.processId);
+
+        const tasks: [{ pid: number, cmd: string }] = await psList();
+        const taskToDebug = tasks.find(task => task.pid === pidToDebug);
+        if (taskToDebug) {
+            const matches = DEBUG_PORT_PATTERN.exec(taskToDebug.cmd);
+            if (matches && matches.length === 3) {
+                config.port = parseInt(matches[2]);
+                config.protocol = matches[1] === 'debug' ? 'legacy' : 'inspector';
+            }
         }
+
+        delete config.processId;
+
+        return config;
     }
 }

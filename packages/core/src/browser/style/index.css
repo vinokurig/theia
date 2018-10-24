@@ -101,6 +101,10 @@ body {
   border-color: var(--theia-accent-color3);
 }
 
+::selection {
+    background: var(--theia-selected-text-background);
+}
+
 .p-Widget:focus {
     border: none;
 }
@@ -143,6 +147,15 @@ button[disabled], .theia-button[disabled] {
   cursor: default;
 }
 
+.p-Widget select {
+    color: var(--theia-ui-font-color1);
+    font-size: var(--theia-ui-font-size1);
+    border-radius: 0;
+    border: 1px solid var(--theia-border-color1);
+    background: var(--theia-layout-color2);
+    outline: none;
+}
+
 /*-----------------------------------------------------------------------------
 | Import children style files
 |----------------------------------------------------------------------------*/
@@ -159,3 +172,5 @@ button[disabled], .theia-button[disabled] {
 @import './tree-decorators.css';
 @import './about.css';
 @import './search-box.css';
+@import './ansi.css';
+@import './view-container.css';

@@ -36,7 +36,8 @@ export class ProblemWidget extends TreeWidget {
 
         this.id = 'problems';
         this.title.label = 'Problems';
-        this.title.iconClass = 'fa fa-exclamation-circle';
+        this.title.caption = 'Problems';
+        this.title.iconClass = 'fa problem-tab-icon';
         this.title.closable = true;
         this.addClass('theia-marker-container');
 
@@ -81,6 +82,16 @@ export class ProblemWidget extends TreeWidget {
         return 'caption';
     }
 
+    protected renderTailDecorations(node: TreeNode, props: NodeProps) {
+        return <div className='row-button-container'>
+            {this.renderRemoveButton(node)}
+        </div>;
+    }
+
+    protected renderRemoveButton(node: TreeNode): React.ReactNode {
+        return <ProblemMarkerRemoveButton model={this.model} node={node} />;
+    }
+
     protected decorateMarkerNode(node: MarkerNode): React.ReactNode {
         if (ProblemMarker.is(node.marker)) {
             let severityClass: string = '';
@@ -96,6 +107,9 @@ export class ProblemWidget extends TreeWidget {
                     {'[' + problemMarker.owner + ']'}
                 </div>
                 <div className='message'>{problemMarker.data.message}
+                    {
+                        (problemMarker.data.code) ? <span className='code'>{'[' + problemMarker.data.code + ']'}</span> : ''
+                    }
                     <span className='position'>
                         {'(' + (problemMarker.data.range.start.line + 1) + ', ' + (problemMarker.data.range.start.character + 1) + ')'}
                     </span>
@@ -123,4 +137,17 @@ export class ProblemWidget extends TreeWidget {
         </div>;
     }
 
+}
+
+export class ProblemMarkerRemoveButton extends React.Component<{ model: ProblemTreeModel, node: TreeNode }> {
+
+    render(): React.ReactNode {
+        return <span className='remove-node' onClick={this.remove}></span>;
+    }
+
+    protected readonly remove = (e: React.MouseEvent<HTMLElement>) => this.doRemove(e);
+    protected doRemove(e: React.MouseEvent<HTMLElement>) {
+        this.props.model.removeNode(this.props.node);
+        e.stopPropagation();
+    }
 }
