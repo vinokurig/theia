@@ -20,7 +20,7 @@ import {
     MessageClient,
     MessageType,
     ProgressMessage,
-    ProgressMessageArguments
+    ProgressMessageArguments, ProgressToken, ProgressUpdate
 } from '@theia/core/lib/common';
 import { NotificationAction, NotificationProperties, Notifications } from './notifications';
 import { NotificationPreferences } from './notification-preferences';
@@ -33,6 +33,33 @@ export class NotificationsMessageClient extends MessageClient {
 
     showMessage(message: Message): Promise<string | undefined> {
         return this.show(message);
+    }
+
+    newProgress(message: ProgressMessageArguments): Promise<ProgressToken | undefined> {
+        const messageArguments = {type: MessageType.Progress, text: message.text, options: { timeout: 0 }, actions: message.actions};
+        const key = this.getKey(messageArguments);
+        if (this.visibleProgressMessages.has(key)) {
+            return Promise.resolve({id: key});
+        }
+        const progressNotification = this.notifications.create(this.getNotificationProperties(
+            messageArguments,
+            () => {
+                this.visibleProgressMessages.delete(key);
+            }));
+        this.visibleProgressMessages.set(key, progressNotification);
+        return Promise.resolve({id: key});
+    }
+
+    stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        const progressMessage = this.visibleProgressMessages.get(progress.id);
+        if (progressMessage) {
+            progressMessage.close();
+        }
+        return Promise.resolve(undefined);
+    }
+
+    reportProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        return Promise.resolve(undefined);
     }
 
     getOrCreateProgressMessage(message: ProgressMessageArguments): ProgressMessage | undefined {

@@ -15,7 +15,13 @@
  ********************************************************************************/
 
 import { injectable, inject } from 'inversify';
-import { MessageClient, MessageType, MessageOptions, ProgressMessage } from './message-service-protocol';
+import {
+    MessageClient,
+    MessageType,
+    MessageOptions,
+    ProgressToken,
+    ProgressUpdate, ProgressMessageArguments
+} from './message-service-protocol';
 
 @injectable()
 export class MessageService {
@@ -52,9 +58,9 @@ export class MessageService {
         return this.processMessage(MessageType.Error, message, args);
     }
 
-    getOrCreateProgressMessage(message: string, ...actions: string[]): ProgressMessage | undefined {
-        return this.client.getOrCreateProgressMessage({ text: message, actions });
-    }
+    // getOrCreateProgressMessage(message: string, ...actions: string[]): ProgressMessage | undefined {
+    //     return this.client.getOrCreateProgressMessage({ text: message, actions });
+    // }
 
     // tslint:disable-next-line:no-any
     protected processMessage(type: MessageType, text: string, args?: any[]): Promise<string | undefined> {
@@ -69,4 +75,15 @@ export class MessageService {
         return this.client.showMessage({ type, text });
     }
 
+    newProgress(message: ProgressMessageArguments): Promise<ProgressToken | undefined> {
+        return this.client.newProgress(message);
+    }
+
+    stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        return this.client.stopProgress(progress, update);
+    }
+
+    reportProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        return this.client.reportProgress(progress, update);
+    }
 }

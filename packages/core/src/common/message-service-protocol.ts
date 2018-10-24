@@ -68,16 +68,27 @@ export class MessageClient {
         return Promise.resolve(undefined);
     }
 
+    newProgress(message: ProgressMessageArguments): Promise<ProgressToken| undefined> {
+        return Promise.resolve(undefined);
+    }
+    stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        return Promise.resolve(undefined);
+    }
+    reportProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        return Promise.resolve(undefined);
+    }
+
     /**
      * Create progress message instance.
      * If a progress message with given text is already shown, returns the shown instance.
      *
      * To be implemented by an extension, e.g. by the messages extension.
      */
-    getOrCreateProgressMessage(message: ProgressMessageArguments): ProgressMessage | undefined {
-        this.logger.info(message.text);
-        return undefined;
-    }}
+    // getOrCreateProgressMessage(message: ProgressMessageArguments): ProgressMessage | undefined {
+    //     this.logger.info(message.text);
+    //     return undefined;
+    // }
+}
 
 @injectable()
 export class DispatchingMessageClient extends MessageClient {
@@ -90,4 +101,13 @@ export class DispatchingMessageClient extends MessageClient {
         ));
     }
 
+}
+
+export interface ProgressToken {
+    id: string;
+}
+
+export interface ProgressUpdate {
+    value: string;
+    requestCancellation: boolean;
 }
