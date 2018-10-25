@@ -37,6 +37,7 @@ import {
     EndOfLine,
     SnippetString,
     ThemeColor,
+    ThemeIcon,
     TextEditorRevealType,
     TextEditorLineNumbersStyle,
     DecorationRangeBehavior,
@@ -67,6 +68,11 @@ import {
     CodeActionTrigger,
     TextDocumentSaveReason,
     CodeAction,
+    TreeItem,
+    TreeItemCollapsibleState,
+    SymbolKind,
+    DocumentSymbol,
+    SymbolInformation
 } from './types-impl';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
 import { TextEditorsExtImpl } from './text-editors';
@@ -84,6 +90,7 @@ import { NotificationExtImpl } from './notification';
 import { StatusBarExtImpl } from './statusBar';
 import { CancellationToken } from '@theia/core/lib/common/cancellation';
 import { MarkdownString } from './markdown-string';
+import { TreeViewsExtImpl } from './tree/tree-views';
 
 export function createAPIFactory(
     rpc: RPCProtocol,
@@ -91,7 +98,7 @@ export function createAPIFactory(
     envExt: EnvExtImpl,
     preferenceRegistryExt: PreferenceRegistryExtImpl): PluginAPIFactory {
 
-    const commandRegistryExt = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
+    const commandRegistry = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
     const quickOpenExt = rpc.set(MAIN_RPC_CONTEXT.QUICK_OPEN_EXT, new QuickOpenExtImpl(rpc));
     const dialogsExt = new DialogsExtImpl(rpc);
     const messageRegistryExt = new MessageRegistryExt(rpc);
@@ -106,16 +113,17 @@ export function createAPIFactory(
     const terminalExt = rpc.set(MAIN_RPC_CONTEXT.TERMINAL_EXT, new TerminalServiceExtImpl(rpc));
     const outputChannelRegistryExt = new OutputChannelRegistryExt(rpc);
     const languagesExt = rpc.set(MAIN_RPC_CONTEXT.LANGUAGES_EXT, new LanguagesExtImpl(rpc, documents));
+    const treeViewsExt = rpc.set(MAIN_RPC_CONTEXT.TREE_VIEWS_EXT, new TreeViewsExtImpl(rpc, commandRegistry));
 
     return function (plugin: InternalPlugin): typeof theia {
         const commands: typeof theia.commands = {
             // tslint:disable-next-line:no-any
             registerCommand(command: theia.Command, handler?: <T>(...args: any[]) => T | Thenable<T>): Disposable {
-                return commandRegistryExt.registerCommand(command, handler);
+                return commandRegistry.registerCommand(command, handler);
             },
             // tslint:disable-next-line:no-any
             executeCommand<T>(commandId: string, ...args: any[]): PromiseLike<T | undefined> {
-                return commandRegistryExt.executeCommand<T>(commandId, args);
+                return commandRegistry.executeCommand<T>(commandId, args);
             },
             // tslint:disable-next-line:no-any
             registerTextEditorCommand(command: theia.Command, callback: (textEditor: theia.TextEditor, edit: theia.TextEditorEdit, ...arg: any[]) => void): Disposable {
@@ -123,7 +131,7 @@ export function createAPIFactory(
             },
             // tslint:disable-next-line:no-any
             registerHandler(commandId: string, handler: (...args: any[]) => any): Disposable {
-                return commandRegistryExt.registerHandler(commandId, handler);
+                return commandRegistry.registerHandler(commandId, handler);
             }
         };
 
@@ -215,7 +223,6 @@ export function createAPIFactory(
             onDidChangeWindowState(listener, thisArg?, disposables?): theia.Disposable {
                 return windowStateExt.onDidChangeWindowState(listener, thisArg, disposables);
             },
-
             createTerminal(nameOrOptions: theia.TerminalOptions | (string | undefined), shellPath?: string, shellArgs?: string[]): theia.Terminal {
                 return terminalExt.createTerminal(nameOrOptions, shellPath, shellArgs);
             },
@@ -225,9 +232,14 @@ export function createAPIFactory(
             set onDidCloseTerminal(event: theia.Event<theia.Terminal>) {
                 terminalExt.onDidCloseTerminal = event;
             },
-
             createTextEditorDecorationType(options: theia.DecorationRenderOptions): theia.TextEditorDecorationType {
                 return editors.createTextEditorDecorationType(options);
+            },
+            registerTreeDataProvider<T>(viewId: string, treeDataProvider: theia.TreeDataProvider<T>): Disposable {
+                return treeViewsExt.registerTreeDataProvider(viewId, treeDataProvider);
+            },
+            createTreeView<T>(viewId: string, options: { treeDataProvider: theia.TreeDataProvider<T> }): theia.TreeView<T> {
+                return treeViewsExt.createTreeView(viewId, options);
             },
             withProgress<R>(
                 options: ProgressOptions,
@@ -265,11 +277,9 @@ export function createAPIFactory(
             onDidOpenTextDocument(listener, thisArg?, disposables?) {
                 return documents.onDidAddDocument(listener, thisArg, disposables);
             },
-
             onDidSaveTextDocument(listener, thisArg?, disposables?) {
                 return documents.onDidSaveTextDocument(listener, thisArg, disposables);
             },
-
             getConfiguration(section?, resource?): theia.WorkspaceConfiguration {
                 return preferenceRegistryExt.getConfiguration(section, resource);
             },
@@ -370,8 +380,13 @@ export function createAPIFactory(
             },
             registerCodeActionsProvider(selector: theia.DocumentSelector, provider: theia.CodeActionProvider, metadata?: theia.CodeActionProviderMetadata): theia.Disposable {
                 return languagesExt.registerCodeActionsProvider(selector, provider, metadata);
+            },
+            registerReferenceProvider(selector: theia.DocumentSelector, provider: theia.ReferenceProvider): theia.Disposable {
+                return languagesExt.registerReferenceProvider(selector, provider);
+            },
+            registerDocumentSymbolProvider(selector: theia.DocumentSelector, provider: theia.DocumentSymbolProvider): theia.Disposable {
+                return languagesExt.registerDocumentSymbolProvider(selector, provider);
             }
-
         };
 
         const plugins: typeof theia.plugins = {
@@ -412,6 +427,7 @@ export function createAPIFactory(
             TextEditorCursorStyle,
             TextEditorLineNumbersStyle,
             ThemeColor,
+            ThemeIcon,
             SnippetString,
             DecorationRangeBehavior,
             OverviewRulerLane,
@@ -441,6 +457,11 @@ export function createAPIFactory(
             CodeActionTrigger,
             TextDocumentSaveReason,
             CodeAction,
+            TreeItem,
+            TreeItemCollapsibleState,
+            SymbolKind,
+            DocumentSymbol,
+            SymbolInformation
         };
     };
 }

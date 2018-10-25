@@ -2004,6 +2004,24 @@ declare module '@theia/plugin' {
     }
 
     /**
+     * A reference to a named icon. Currently only [File](#ThemeIcon.File) and [Folder](#ThemeIcon.Folder) are supported.
+     * Using a theme icon is preferred over a custom icon as it gives theme authors the possibility to change the icons.
+     */
+    export class ThemeIcon {
+        /**
+         * Reference to a icon representing a file. The icon is taken from the current file icon theme or a placeholder icon.
+         */
+        static readonly File: ThemeIcon;
+
+        /**
+         * Reference to a icon representing a folder. The icon is taken from the current file icon theme or a placeholder icon.
+         */
+        static readonly Folder: ThemeIcon;
+
+        private constructor(id: string);
+    }
+
+    /**
      * Represents the state of a window.
      */
     export interface WindowState {
@@ -2152,7 +2170,7 @@ declare module '@theia/plugin' {
         /**
          * Send text to the terminal.
          * @param text - text content.
-         * @param addNewLine - in case true - apply new line after the text, otherwise don't apply new line.
+         * @param addNewLine - in case true - apply new line after the text, otherwise don't apply new line. This defaults to `true`.
          */
         sendText(text: string, addNewLine?: boolean): void;
 
@@ -2548,6 +2566,201 @@ declare module '@theia/plugin' {
          * @param - terminal options.
          */
         export function createTerminal(options: TerminalOptions): Terminal;
+
+        /**
+         * Register a [TreeDataProvider](#TreeDataProvider) for the view contributed using the extension point `views`.
+         * This will allow you to contribute data to the [TreeView](#TreeView) and update if the data changes.
+         *
+         * **Note:** To get access to the [TreeView](#TreeView) and perform operations on it, use [createTreeView](#window.createTreeView).
+         *
+         * @param viewId Id of the view contributed using the extension point `views`.
+         * @param treeDataProvider A [TreeDataProvider](#TreeDataProvider) that provides tree data for the view
+         */
+        export function registerTreeDataProvider<T>(viewId: string, treeDataProvider: TreeDataProvider<T>): Disposable;
+
+        /**
+         * Create a [TreeView](#TreeView) for the view contributed using the extension point `views`.
+         * @param viewId Id of the view contributed using the extension point `views`.
+         * @param options Options object to provide [TreeDataProvider](#TreeDataProvider) for the view.
+         * @returns a [TreeView](#TreeView).
+         */
+        export function createTreeView<T>(viewId: string, options: { treeDataProvider: TreeDataProvider<T> }): TreeView<T>;
+
+    }
+
+    /**
+     * The event that is fired when an element in the [TreeView](#TreeView) is expanded or collapsed
+     */
+    export interface TreeViewExpansionEvent<T> {
+
+        /**
+         * Element that is expanded or collapsed.
+         */
+        element: T;
+
+    }
+
+    /**
+     * Represents a Tree view
+     */
+    export interface TreeView<T> extends Disposable {
+
+        /**
+         * Event that is fired when an element is expanded
+         */
+        readonly onDidExpandElement: Event<TreeViewExpansionEvent<T>>;
+
+        /**
+         * Event that is fired when an element is collapsed
+         */
+        readonly onDidCollapseElement: Event<TreeViewExpansionEvent<T>>;
+
+        /**
+         * Currently selected elements.
+         */
+        readonly selection: ReadonlyArray<T>;
+
+        /**
+         * Reveal an element. By default revealed element is selected.
+         *
+         * In order to not to select, set the option `select` to `false`.
+         *
+         * **NOTE:** [TreeDataProvider](#TreeDataProvider) is required to implement [getParent](#TreeDataProvider.getParent) method to access this API.
+         */
+        reveal(element: T, options?: { select?: boolean }): PromiseLike<void>;
+    }
+
+    /**
+     * A data provider that provides tree data
+     */
+    export interface TreeDataProvider<T> {
+        /**
+         * An optional event to signal that an element or root has changed.
+         * This will trigger the view to update the changed element/root and its children recursively (if shown).
+         * To signal that root has changed, do not pass any argument or pass `undefined` or `null`.
+         */
+        onDidChangeTreeData?: Event<T | undefined | null>;
+
+        /**
+         * Get [TreeItem](#TreeItem) representation of the `element`
+         *
+         * @param element The element for which [TreeItem](#TreeItem) representation is asked for.
+         * @return [TreeItem](#TreeItem) representation of the element
+         */
+        getTreeItem(element: T): TreeItem | PromiseLike<TreeItem>;
+
+        /**
+         * Get the children of `element` or root if no element is passed.
+         *
+         * @param element The element from which the provider gets children. Can be `undefined`.
+         * @return Children of `element` or root if no element is passed.
+         */
+        getChildren(element?: T): ProviderResult<T[]>;
+
+        /**
+         * Optional method to return the parent of `element`.
+         * Return `null` or `undefined` if `element` is a child of root.
+         *
+         * **NOTE:** This method should be implemented in order to access [reveal](#TreeView.reveal) API.
+         *
+         * @param element The element for which the parent has to be returned.
+         * @return Parent of `element`.
+         */
+        getParent?(element: T): ProviderResult<T>;
+    }
+
+    export class TreeItem {
+        /**
+         * A human-readable string describing this item. When `falsy`, it is derived from [resourceUri](#TreeItem.resourceUri).
+         */
+        label?: string;
+
+        /**
+         * Optional id for the tree item that has to be unique across tree. The id is used to preserve the selection and expansion state of the tree item.
+         *
+         * If not provided, an id is generated using the tree item's label. **Note** that when labels change, ids will change and that selection and expansion state cannot be kept stable anymore.
+         */
+        id?: string;
+
+        /**
+         * The icon path or [ThemeIcon](#ThemeIcon) for the tree item.
+         * When `falsy`, [Folder Theme Icon](#ThemeIcon.Folder) is assigned, if item is collapsible otherwise [File Theme Icon](#ThemeIcon.File).
+         * When a [ThemeIcon](#ThemeIcon) is specified, icon is derived from the current file icon theme for the specified theme icon using [resourceUri](#TreeItem.resourceUri) (if provided).
+         */
+        iconPath?: string | Uri | { light: string | Uri; dark: string | Uri } | ThemeIcon;
+
+        /**
+         * The [uri](#Uri) of the resource representing this item.
+         *
+         * Will be used to derive the [label](#TreeItem.label), when it is not provided.
+         * Will be used to derive the icon from current icon theme, when [iconPath](#TreeItem.iconPath) has [ThemeIcon](#ThemeIcon) value.
+         */
+        resourceUri?: Uri;
+
+        /**
+         * The tooltip text when you hover over this item.
+         */
+        tooltip?: string | undefined;
+
+        /**
+         * The [command](#Command) which should be run when the tree item is selected.
+         */
+        command?: Command;
+
+        /**
+         * [TreeItemCollapsibleState](#TreeItemCollapsibleState) of the tree item.
+         */
+        collapsibleState?: TreeItemCollapsibleState;
+
+        /**
+         * Context value of the tree item. This can be used to contribute item specific actions in the tree.
+         * For example, a tree item is given a context value as `folder`. When contributing actions to `view/item/context`
+         * using `menus` extension point, you can specify context value for key `viewItem` in `when` expression like `viewItem == folder`.
+         * ```
+         *	"contributes": {
+         *		"menus": {
+         *			"view/item/context": [
+         *				{
+         *					"command": "extension.deleteFolder",
+            *					"when": "viewItem == folder"
+            *				}
+            *			]
+            *		}
+            *	}
+            * ```
+            * This will show action `extension.deleteFolder` only for items with `contextValue` is `folder`.
+            */
+        contextValue?: string;
+
+		/**
+		 * @param label A human-readable string describing this item
+		 * @param collapsibleState [TreeItemCollapsibleState](#TreeItemCollapsibleState) of the tree item. Default is [TreeItemCollapsibleState.None](#TreeItemCollapsibleState.None)
+		 */
+        // constructor(label: string, collapsibleState?: TreeItemCollapsibleState);
+
+		/**
+		 * @param resourceUri The [uri](#Uri) of the resource representing this item.
+		 * @param collapsibleState [TreeItemCollapsibleState](#TreeItemCollapsibleState) of the tree item. Default is [TreeItemCollapsibleState.None](#TreeItemCollapsibleState.None)
+		 */
+        // constructor(resourceUri: Uri, collapsibleState?: TreeItemCollapsibleState);
+    }
+
+    /**
+     * Collapsible state of the tree item
+     */
+    export enum TreeItemCollapsibleState {
+        /**
+         * Determines an item can be neither collapsed nor expanded. Implies it has no children.
+         */
+        None = 0,
+        /**
+         * Determines an item is collapsed
+         */
+        Collapsed = 1,
+        /**
+         * Determines an item is expanded
+         */
+        Expanded = 2
 
         /**
          * Show progress in the editor. Progress is shown while running the given callback
@@ -3376,6 +3589,187 @@ declare module '@theia/plugin' {
      *
      */
     export type ProviderResult<T> = T | undefined | PromiseLike<T | undefined>;
+
+
+    /**
+     * A symbol kind.
+     */
+    export enum SymbolKind {
+        File = 0,
+        Module = 1,
+        Namespace = 2,
+        Package = 3,
+        Class = 4,
+        Method = 5,
+        Property = 6,
+        Field = 7,
+        Constructor = 8,
+        Enum = 9,
+        Interface = 10,
+        Function = 11,
+        Variable = 12,
+        Constant = 13,
+        String = 14,
+        Number = 15,
+        Boolean = 16,
+        Array = 17,
+        Object = 18,
+        Key = 19,
+        Null = 20,
+        EnumMember = 21,
+        Struct = 22,
+        Event = 23,
+        Operator = 24,
+        TypeParameter = 25
+    }
+
+    /**
+     * Represents information about programming constructs like variables, classes,
+     * interfaces etc.
+     */
+    export class SymbolInformation {
+
+        /**
+         * The name of this symbol.
+         */
+        name: string;
+
+        /**
+         * The name of the symbol containing this symbol.
+         */
+        containerName: string;
+
+        /**
+         * The kind of this symbol.
+         */
+        kind: SymbolKind;
+
+        /**
+         * The location of this symbol.
+         */
+        location: Location;
+
+        /**
+         * Creates a new symbol information object.
+         *
+         * @param name The name of the symbol.
+         * @param kind The kind of the symbol.
+         * @param containerName The name of the symbol containing the symbol.
+         * @param location The location of the symbol.
+         */
+        constructor(name: string, kind: SymbolKind, containerName: string, location: Location);
+
+        /**
+         * ~~Creates a new symbol information object.~~
+         *
+         * @deprecated Please use the constructor taking a [location](#Location) object.
+         *
+         * @param name The name of the symbol.
+         * @param kind The kind of the symbol.
+         * @param range The range of the location of the symbol.
+         * @param uri The resource of the location of symbol, defaults to the current document.
+         * @param containerName The name of the symbol containing the symbol.
+         */
+        constructor(name: string, kind: SymbolKind, range: Range, uri?: Uri, containerName?: string);
+    }
+
+    /**
+    * Represents programming constructs like variables, classes, interfaces etc. that appear in a document. Document
+    * symbols can be hierarchical and they have two ranges: one that encloses its definition and one that points to
+    * its most interesting range, e.g. the range of an identifier.
+    */
+    export class DocumentSymbol {
+
+        /**
+         * The name of this symbol.
+         */
+        name: string;
+
+        /**
+         * More detail for this symbol, e.g the signature of a function.
+         */
+        detail: string;
+
+        /**
+         * The kind of this symbol.
+         */
+        kind: SymbolKind;
+
+        /**
+         * The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g comments and code.
+         */
+        range: Range;
+
+        /**
+         * The range that should be selected and reveal when this symbol is being picked, e.g the name of a function.
+         * Must be contained by the [`range`](#DocumentSymbol.range).
+         */
+        selectionRange: Range;
+
+        /**
+         * Children of this symbol, e.g. properties of a class.
+         */
+        children: DocumentSymbol[];
+
+        /**
+         * Creates a new document symbol.
+         *
+         * @param name The name of the symbol.
+         * @param detail Details for the symbol.
+         * @param kind The kind of the symbol.
+         * @param range The full range of the symbol.
+         * @param selectionRange The range that should be reveal.
+         */
+        constructor(name: string, detail: string, kind: SymbolKind, range: Range, selectionRange: Range);
+    }
+
+    /**
+     * The document symbol provider interface defines the contract between extensions and
+     * the [go to symbol](https://code.visualstudio.com/docs/editor/editingevolved#_go-to-symbol)-feature.
+     */
+    export interface DocumentSymbolProvider {
+
+        /**
+         * Provide symbol information for the given document.
+         *
+         * @param document The document in which the command was invoked.
+         * @param token A cancellation token.
+         * @return An array of document highlights or a thenable that resolves to such. The lack of a result can be
+         * signaled by returning `undefined`, `null`, or an empty array.
+         */
+        provideDocumentSymbols(document: TextDocument, token: CancellationToken): ProviderResult<SymbolInformation[] | DocumentSymbol[]>;
+    }
+
+    /**
+     * Value-object that contains additional information when
+     * requesting references.
+     */
+    export interface ReferenceContext {
+
+        /**
+         * Include the declaration of the current symbol.
+         */
+        includeDeclaration: boolean;
+    }
+
+    /**
+     * The reference provider interface defines the contract between extensions and
+     * the [find references](https://code.visualstudio.com/docs/editor/editingevolved#_peek)-feature.
+     */
+    export interface ReferenceProvider {
+
+        /**
+         * Provide a set of project-wide references for the given position and document.
+         *
+         * @param document The document in which the command was invoked.
+         * @param position The position at which the command was invoked.
+         * @param context
+         * @param token A cancellation token.
+         * @return An array of locations or a thenable that resolves to such. The lack of a result can be
+         * signaled by returning `undefined`, `null`, or an empty array.
+         */
+        provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProviderResult<Location[]>;
+    }
 
     /**
      * A text edit represents edits that should be applied
@@ -4499,6 +4893,32 @@ declare module '@theia/plugin' {
         * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
         */
         export function registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider): Disposable;
+
+        /**
+         * Register a reference provider.
+         *
+         * Multiple providers can be registered for a language. In that case providers are asked in
+         * parallel and the results are merged. A failing provider (rejected promise or exception) will
+         * not cause a failure of the whole operation.
+         *
+         * @param selector A selector that defines the documents this provider is applicable to.
+         * @param provider A reference provider.
+         * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+         */
+        export function registerReferenceProvider(selector: DocumentSelector, provider: ReferenceProvider): Disposable;
+
+        /**
+         * Register a document symbol provider.
+         *
+         * Multiple providers can be registered for a language. In that case providers are asked in
+         * parallel and the results are merged. A failing provider (rejected promise or exception) will
+         * not cause a failure of the whole operation.
+         *
+         * @param selector A selector that defines the documents this provider is applicable to.
+         * @param provider A document symbol provider.
+         * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+         */
+        export function registerDocumentSymbolProvider(selector: DocumentSelector, provider: DocumentSymbolProvider): Disposable;
     }
 
     /**

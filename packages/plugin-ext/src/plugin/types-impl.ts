@@ -516,6 +516,17 @@ export class ThemeColor {
     }
 }
 
+export class ThemeIcon {
+
+    static readonly File: ThemeIcon;
+
+    static readonly Folder: ThemeIcon;
+
+    private constructor(public id: string) {
+    }
+
+}
+
 export enum TextEditorRevealType {
     Default = 0,
     InCenter = 1,
@@ -925,6 +936,136 @@ export class CodeAction {
     constructor(title: string, kind?: CodeActionKind) {
         this.title = title;
         this.kind = kind;
+    }
+}
+
+export class TreeItem {
+
+    label?: string;
+
+    id?: string;
+
+    iconPath?: string | URI | { light: string | URI; dark: string | URI } | ThemeIcon;
+
+    resourceUri?: URI;
+
+    tooltip?: string | undefined;
+
+    command?: theia.Command;
+
+    collapsibleState?: TreeItemCollapsibleState;
+
+    contextValue?: string;
+
+}
+
+export enum TreeItemCollapsibleState {
+    None = 0,
+    Collapsed = 1,
+    Expanded = 2
+}
+
+export enum SymbolKind {
+    File = 0,
+    Module = 1,
+    Namespace = 2,
+    Package = 3,
+    Class = 4,
+    Method = 5,
+    Property = 6,
+    Field = 7,
+    Constructor = 8,
+    Enum = 9,
+    Interface = 10,
+    Function = 11,
+    Variable = 12,
+    Constant = 13,
+    String = 14,
+    Number = 15,
+    Boolean = 16,
+    Array = 17,
+    Object = 18,
+    Key = 19,
+    Null = 20,
+    EnumMember = 21,
+    Struct = 22,
+    Event = 23,
+    Operator = 24,
+    TypeParameter = 25
+}
+
+export class SymbolInformation {
+
+    static validate(candidate: SymbolInformation): void {
+        if (!candidate.name) {
+            throw new Error('Should provide a name inside candidate field');
+        }
+    }
+
+    name: string;
+    location: Location;
+    kind: SymbolKind;
+    containerName: undefined | string;
+    constructor(name: string, kind: SymbolKind, containerName: string, location: Location);
+    constructor(name: string, kind: SymbolKind, range: Range, uri?: URI, containerName?: string);
+    constructor(name: string, kind: SymbolKind, rangeOrContainer: string | Range, locationOrUri?: Location | URI, containerName?: string) {
+        this.name = name;
+        this.kind = kind;
+        this.containerName = containerName;
+
+        if (typeof rangeOrContainer === 'string') {
+            this.containerName = rangeOrContainer;
+        }
+
+        if (locationOrUri instanceof Location) {
+            this.location = locationOrUri;
+        } else if (rangeOrContainer instanceof Range) {
+            this.location = new Location(locationOrUri!, rangeOrContainer);
+        }
+
+        SymbolInformation.validate(this);
+    }
+
+    toJSON(): any {
+        return {
+            name: this.name,
+            kind: SymbolKind[this.kind],
+            location: this.location,
+            containerName: this.containerName
+        };
+    }
+}
+
+export class DocumentSymbol {
+
+    static validate(candidate: DocumentSymbol): void {
+        if (!candidate.name) {
+            throw new Error('Should provide a name inside candidate field');
+        }
+        if (!candidate.range.contains(candidate.selectionRange)) {
+            throw new Error('selectionRange must be contained in fullRange');
+        }
+        if (candidate.children) {
+            candidate.children.forEach(DocumentSymbol.validate);
+        }
+    }
+
+    name: string;
+    detail: string;
+    kind: SymbolKind;
+    range: Range;
+    selectionRange: Range;
+    children: DocumentSymbol[];
+
+    constructor(name: string, detail: string, kind: SymbolKind, range: Range, selectionRange: Range) {
+        this.name = name;
+        this.detail = detail;
+        this.kind = kind;
+        this.range = range;
+        this.selectionRange = selectionRange;
+        this.children = [];
+
+        DocumentSymbol.validate(this);
     }
 }
 

@@ -29,6 +29,7 @@ import { OutputChannelRegistryMainImpl } from './output-channel-registry-main';
 import { TerminalServiceMainImpl } from './terminal-main';
 import { LanguagesMainImpl } from './languages-main';
 import { DialogsMainImpl } from './dialogs-main';
+import { TreeViewsMainImpl } from './view/tree-views-main';
 import { NotificationMainImpl } from './notification-main';
 import { StatusBarMainImpl } from './status-bar-main';
 
@@ -65,11 +66,11 @@ export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container
     const notificationMain = new NotificationMainImpl(rpc, container);
     rpc.set(PLUGIN_RPC_CONTEXT.NOTIFICATION_MAIN, notificationMain);
 
-    const statusBarMain = new StatusBarMainImpl(container);
-    rpc.set(PLUGIN_RPC_CONTEXT.STATUS_BAR_MAIN, statusBarMain);
-
-    const terminalMain = new TerminalServiceMainImpl(container, rpc);
+    const terminalMain = new TerminalServiceMainImpl(rpc, container);
     rpc.set(PLUGIN_RPC_CONTEXT.TERMINAL_MAIN, terminalMain);
+
+    const treeViewsMain = new TreeViewsMainImpl(rpc, container);
+    rpc.set(PLUGIN_RPC_CONTEXT.TREE_VIEWS_MAIN, treeViewsMain);
 
     const outputChannelRegistryMain = new OutputChannelRegistryMainImpl(container);
     rpc.set(PLUGIN_RPC_CONTEXT.OUTPUT_CHANNEL_REGISTRY_MAIN, outputChannelRegistryMain);
