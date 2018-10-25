@@ -16,7 +16,7 @@
 
 import { injectable, inject } from 'inversify';
 import { ILogger } from './logger';
-import { Event, Emitter } from '../common';
+import { Event } from '../common';
 
 export const messageServicePath = '/services/messageService';
 
@@ -56,6 +56,8 @@ export class MessageClient {
 
     constructor(@inject(ILogger) protected readonly logger: ILogger) { }
 
+    onProgressCanceled: Event<string>;
+
     /**
      * Show a message of the given type and possible actions to the user.
      * Resolve to a chosen action.
@@ -71,26 +73,13 @@ export class MessageClient {
     newProgress(message: ProgressMessageArguments): Promise<ProgressToken| undefined> {
         return Promise.resolve(undefined);
     }
-    onProgressCanceled(): Event<string> {
-        return new Emitter<string>().event;
-    }
-    stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+
+    stopProgress(progress: ProgressToken): Promise<void> {
         return Promise.resolve(undefined);
     }
     reportProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
         return Promise.resolve(undefined);
     }
-
-    /**
-     * Create progress message instance.
-     * If a progress message with given text is already shown, returns the shown instance.
-     *
-     * To be implemented by an extension, e.g. by the messages extension.
-     */
-    // getOrCreateProgressMessage(message: ProgressMessageArguments): ProgressMessage | undefined {
-    //     this.logger.info(message.text);
-    //     return undefined;
-    // }
 }
 
 @injectable()
@@ -111,6 +100,6 @@ export interface ProgressToken {
 }
 
 export interface ProgressUpdate {
-    value: string;
-    requestCancellation: boolean;
+    value?: string;
+    increment?: number;
 }

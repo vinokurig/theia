@@ -18,58 +18,35 @@ import { MAIN_RPC_CONTEXT, NotificationExt, NotificationMain } from '../../api/p
 import { MessageService } from '@theia/core/lib/common/message-service';
 import { interfaces } from 'inversify';
 import { RPCProtocol } from '../../api/rpc-protocol';
-import { Disposable, DisposableCollection } from '@theia/core';
 
-export class NotificationMainImpl implements NotificationMain, Disposable {
+export class NotificationMainImpl implements NotificationMain {
 
     private readonly proxy: NotificationExt;
     private readonly messageService: MessageService;
-    private readonly disposableCollection = new DisposableCollection();
 
     constructor(rpc: RPCProtocol, container: interfaces.Container) {
         this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.NOTIFICATION_EXT);
         this.messageService = container.get(MessageService);
-    }
 
-    $startProgress(message: string): void {
-        const notification = this.messageService.newProgress({text: message});
-        if (!notification) {
-            return;
-        }
-        notification.then(id => {
-            this.disposableCollection.push(this.messageService.onProgressCanceled(() => {
-                this.proxy.$onCancel();
-                this.dispose();
-            }));
+        this.messageService.onProgressCanceled(id => {
+            this.proxy.$onCancel(id);
         });
-        // this.disposableCollection.push(notification.onCancel(() => {
-        //     this.proxy.$onCancel();
-        //     this.dispose();
-        // }));
     }
 
-    $stopProgress(message: string): void {
-        // const notification = this.messageService.getOrCreateProgressMessage(message);
-        // if (!notification) {
-        //     return;
-        // }
-        // if (notification) {
-        //     notification.close();
-        //     this.disposableCollection.dispose();
-        // }
+    async $startProgress(message: string): Promise<string | undefined> {
+        const progress = await this.messageService.newProgress({text: message});
+        if (progress) {
+            return Promise.resolve(progress.id);
+        } else {
+            return Promise.resolve(undefined);
+        }
     }
 
-    $updateProgress(message: string, item: { message?: string, increment?: number }): void {
-        // const notification = this.messageService.getOrCreateProgressMessage(message);
-        // if (!notification) {
-        //     return;
-        // }
-        // if (notification) {
-        //     notification.update(item);
-        // }
+    $stopProgress(id: string): void {
+        this.messageService.stopProgress({ id });
     }
 
-    dispose(): void {
-        this.disposableCollection.dispose();
+    $updateProgress(id: string, item: { message?: string, increment?: number }): void {
+        this.messageService.reportProgress({ id }, { value: item.message, increment: item.increment });
     }
 }

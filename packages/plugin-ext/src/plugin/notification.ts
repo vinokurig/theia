@@ -24,44 +24,48 @@ import { Disposable, DisposableCollection } from '@theia/core/lib/common/disposa
 export class NotificationExtImpl implements NotificationExt {
     private readonly proxy: NotificationMain;
 
-    private readonly onCancelEmitter: Emitter<void> = new Emitter<void>();
-    private readonly onCancel: Event<void> = this.onCancelEmitter.event;
+    private readonly onCancelEmitter: Emitter<string> = new Emitter();
+    private readonly onCancel: Event<string> = this.onCancelEmitter.event;
 
     constructor(rpc: RPCProtocol) {
         this.proxy = rpc.getProxy(PLUGIN_RPC_CONTEXT.NOTIFICATION_MAIN);
     }
 
-    withProgress<R>(
+    async withProgress<R>(
         options: ProgressOptions,
         task: (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => Thenable<R>
-    ): Thenable<R> {
+    ): Promise<R> {
         const message = options.title ? options.title : '';
-        this.proxy.$startProgress(message);
-        const token = new CancellationTokenImpl(this.onCancel);
-        const thenable = task(new ProgressCallback(message, this.proxy), token);
-        thenable.then((() => {
-            this.proxy.$stopProgress(message);
+        const id = await this.proxy.$startProgress(message);
+        if (id) {
+            const token = new CancellationTokenImpl(id, this.onCancel);
+            const thenable =  await task(new ProgressCallback(id, this.proxy), token);
+            this.proxy.$stopProgress(id);
             token.dispose();
-        }));
-        return thenable;
+            return thenable;
+        } else {
+            throw new Error('Failed to create progress notification');
+        }
     }
 
-    $onCancel(): void {
-        this.onCancelEmitter.fire(undefined);
+    $onCancel(id: string): void {
+        this.onCancelEmitter.fire(id);
     }
 }
 
 class ProgressCallback<T> implements Progress<{ message?: string, increment?: number }> {
 
-    private readonly message: string;
+    private readonly id: string | undefined;
     private readonly proxy: NotificationMain;
 
-    constructor(message: string, proxy: NotificationMain) {
-        this.message = message;
+    constructor(id: string | undefined, proxy: NotificationMain) {
+        this.id = id;
         this.proxy = proxy;
     }
     report(item: { message?: string, increment?: number }) {
-        this.proxy.$updateProgress(this.message, item);
+        if (this.id) {
+            this.proxy.$updateProgress(this.id, item);
+        }
     }
 }
 
@@ -73,11 +77,13 @@ class CancellationTokenImpl implements CancellationToken, Disposable {
     isCancellationRequested: boolean = false;
     readonly onCancellationRequested: Event<void> = this.onCancellationRequestedEmitter.event;
 
-    constructor(oncCancel: Event<void>) {
-        this.disposableCollection.push(oncCancel(() => {
-            this.onCancellationRequestedEmitter.fire(undefined);
-            this.isCancellationRequested = true;
-            this.dispose();
+    constructor(id: string, onCancel: Event<string>) {
+        this.disposableCollection.push(onCancel(cancelId => {
+            if (cancelId === id) {
+                this.onCancellationRequestedEmitter.fire(undefined);
+                this.isCancellationRequested = true;
+                this.dispose();
+            }
         }));
     }
 

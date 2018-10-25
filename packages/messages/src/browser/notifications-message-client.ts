@@ -17,7 +17,6 @@
 import { injectable, inject } from 'inversify';
 import {
     Emitter,
-    Event,
     Message,
     MessageClient,
     MessageType,
@@ -40,25 +39,25 @@ export class NotificationsMessageClient extends MessageClient {
     newProgress(message: ProgressMessageArguments): Promise<ProgressToken | undefined> {
         const messageArguments = {type: MessageType.Progress, text: message.text, options: { timeout: 0 }, actions: message.actions};
         const key = this.getKey(messageArguments);
-        if (this.visibleProgressMessages.has(key)) {
+        if (this.visibleProgressNotifications.has(key)) {
             return Promise.resolve({id: key});
         }
         const progressNotification = this.notifications.create(this.getNotificationProperties(
             messageArguments,
             () => {
-                this.visibleProgressMessages.delete(key);
+                this.onProgressCanceledEmitter.fire(key);
+                this.visibleProgressNotifications.delete(key);
             }));
-        this.visibleProgressMessages.set(key, progressNotification);
+        this.visibleProgressNotifications.set(key, progressNotification);
+        progressNotification.show();
         return Promise.resolve({id: key});
     }
 
     private onProgressCanceledEmitter: Emitter<string> = new Emitter();
-    onProgressCanceled(): Event<string> {
-        return this.onProgressCanceledEmitter.event;
-    }
+    onProgressCanceled = this.onProgressCanceledEmitter.event;
 
-    stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
-        const progressMessage = this.visibleProgressMessages.get(progress.id);
+    stopProgress(progress: ProgressToken): Promise<void> {
+        const progressMessage = this.visibleProgressNotifications.get(progress.id);
         if (progressMessage) {
             progressMessage.close();
         }
@@ -66,26 +65,30 @@ export class NotificationsMessageClient extends MessageClient {
     }
 
     reportProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
+        const notification = this.visibleProgressNotifications.get(progress.id);
+        if (notification) {
+            notification.update({ message: update.value, increment: update.increment });
+        }
         return Promise.resolve(undefined);
     }
 
     getOrCreateProgressMessage(message: ProgressMessageArguments): ProgressMessage | undefined {
         const messageArguments = {type: MessageType.Progress, text: message.text, options: { timeout: 0 }, actions: message.actions};
         const key = this.getKey(messageArguments);
-        if (this.visibleProgressMessages.has(key)) {
-            return this.visibleProgressMessages.get(key);
+        if (this.visibleProgressNotifications.has(key)) {
+            return this.visibleProgressNotifications.get(key);
         }
         const progressNotification = this.notifications.create(this.getNotificationProperties(
             messageArguments,
             () => {
-                this.visibleProgressMessages.delete(key);
+                this.visibleProgressNotifications.delete(key);
             }));
-        this.visibleProgressMessages.set(key, progressNotification);
+        this.visibleProgressNotifications.set(key, progressNotification);
         return progressNotification;
     }
 
     protected visibleMessages = new Set<string>();
-    protected visibleProgressMessages = new Map<string, ProgressMessage>();
+    protected visibleProgressNotifications = new Map<string, ProgressMessage>();
     protected show(message: Message): Promise<string | undefined> {
         const key = this.getKey(message);
         if (this.visibleMessages.has(key)) {

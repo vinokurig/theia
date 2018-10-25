@@ -336,12 +336,12 @@ export interface NotificationExt {
         options: ProgressOptions,
         task: (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => Thenable<R>
     ): Thenable<R>;
-    $onCancel(): void;
+    $onCancel(id: string): void;
 }
 
 export interface NotificationMain {
-    $startProgress(message: string): void;
-    $stopProgress(message: string): void;
+    $startProgress(message: string): Promise<string | undefined>;
+    $stopProgress(id: string): void;
     $updateProgress(message: string, item: { message?: string, increment?: number }): void;
 }
 

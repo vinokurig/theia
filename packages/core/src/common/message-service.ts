@@ -59,10 +59,6 @@ export class MessageService {
         return this.processMessage(MessageType.Error, message, args);
     }
 
-    // getOrCreateProgressMessage(message: string, ...actions: string[]): ProgressMessage | undefined {
-    //     return this.client.getOrCreateProgressMessage({ text: message, actions });
-    // }
-
     // tslint:disable-next-line:no-any
     protected processMessage(type: MessageType, text: string, args?: any[]): Promise<string | undefined> {
         if (!!args && args.length > 0) {
@@ -80,15 +76,13 @@ export class MessageService {
         return this.client.newProgress(message);
     }
 
-    get onProgressCanceled(): Event<string> {
-        return this.client.onProgressCanceled();
-    }
-
-    stopProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
-        return this.client.stopProgress(progress, update);
+    stopProgress(progress: ProgressToken): Promise<void> {
+        return this.client.stopProgress(progress);
     }
 
     reportProgress(progress: ProgressToken, update: ProgressUpdate): Promise<void> {
         return this.client.reportProgress(progress, update);
     }
+
+    onProgressCanceled: Event<string> = this.client.onProgressCanceled;
 }
