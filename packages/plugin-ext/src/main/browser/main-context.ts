@@ -30,6 +30,7 @@ import { TerminalServiceMainImpl } from './terminal-main';
 import { LanguagesMainImpl } from './languages-main';
 import { DialogsMainImpl } from './dialogs-main';
 import { TreeViewsMainImpl } from './view/tree-views-main';
+import { ConnectionMainImpl } from './connection-main';
 import { NotificationMainImpl } from './notification-main';
 
 export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container): void {
@@ -76,4 +77,7 @@ export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container
 
     const languagesMain = new LanguagesMainImpl(rpc);
     rpc.set(PLUGIN_RPC_CONTEXT.LANGUAGES_MAIN, languagesMain);
+
+    const pluginConnection = new ConnectionMainImpl(rpc);
+    rpc.set(PLUGIN_RPC_CONTEXT.CONNECTION_MAIN, pluginConnection);
 }

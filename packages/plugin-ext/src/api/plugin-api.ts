@@ -146,6 +146,16 @@ export interface TerminalServiceExt {
     $terminalClosed(id: number): void;
 }
 
+export interface ConnectionMain {
+    $sendMessage(id: string, message: string): void;
+}
+
+export interface ConnectionExt {
+    $sendMessage(id: string, message: string): void;
+    $createConnection(id: string): Promise<void>;
+    $deleteConnection(id: string): Promise<void>
+}
+
 export interface TerminalServiceMain {
     /**
      * Create new Terminal with Terminal options.
@@ -761,6 +771,7 @@ export interface LanguagesExt {
     $provideCompletionItems(handle: number, resource: UriComponents, position: Position, context: CompletionContext): Promise<CompletionResultDto | undefined>;
     $resolveCompletionItem(handle: number, resource: UriComponents, position: Position, completion: Completion): Promise<Completion>;
     $releaseCompletionItems(handle: number, id: number): void;
+    $provideTypeDefinition(handle: number, resource: UriComponents, position: Position): Promise<Definition | DefinitionLink[] | undefined>;
     $provideDefinition(handle: number, resource: UriComponents, position: Position): Promise<Definition | DefinitionLink[] | undefined>;
     $provideReferences(handle: number, resource: UriComponents, position: Position, context: ReferenceContext): Promise<Location[] | undefined>;
     $provideSignatureHelp(handle: number, resource: UriComponents, position: Position): Promise<SignatureHelp | undefined>;
@@ -792,6 +803,7 @@ export interface LanguagesMain {
     $setLanguageConfiguration(handle: number, languageId: string, configuration: SerializedLanguageConfiguration): void;
     $unregister(handle: number): void;
     $registerCompletionSupport(handle: number, selector: SerializedDocumentFilter[], triggerCharacters: string[], supportsResolveDetails: boolean): void;
+    $registerTypeDefinitionProvider(handle: number, selector: SerializedDocumentFilter[]): void;
     $registerDefinitionProvider(handle: number, selector: SerializedDocumentFilter[]): void;
     $registeReferenceProvider(handle: number, selector: SerializedDocumentFilter[]): void;
     $registerSignatureHelpProvider(handle: number, selector: SerializedDocumentFilter[], triggerCharacters: string[]): void;
@@ -824,6 +836,7 @@ export const PLUGIN_RPC_CONTEXT = {
     PREFERENCE_REGISTRY_MAIN: createProxyIdentifier<PreferenceRegistryMain>('PreferenceRegistryMain'),
     OUTPUT_CHANNEL_REGISTRY_MAIN: <ProxyIdentifier<OutputChannelRegistryMain>>createProxyIdentifier<OutputChannelRegistryMain>('OutputChannelRegistryMain'),
     LANGUAGES_MAIN: createProxyIdentifier<LanguagesMain>('LanguagesMain'),
+    CONNECTION_MAIN: createProxyIdentifier<ConnectionMain>('ConnectionMain'),
 };
 
 export const MAIN_RPC_CONTEXT = {
@@ -840,4 +853,5 @@ export const MAIN_RPC_CONTEXT = {
     TREE_VIEWS_EXT: createProxyIdentifier<TreeViewsExt>('TreeViewsExt'),
     PREFERENCE_REGISTRY_EXT: createProxyIdentifier<PreferenceRegistryExt>('PreferenceRegistryExt'),
     LANGUAGES_EXT: createProxyIdentifier<LanguagesExt>('LanguagesExt'),
+    CONNECTION_EXT: createProxyIdentifier<ConnectionExt>('ConnectionExt'),
 };
