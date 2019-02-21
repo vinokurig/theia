@@ -13,22 +13,64 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
-import { injectable, inject } from 'inversify';
+import {inject, injectable} from 'inversify';
 import URI from '@theia/core/lib/common/uri';
-import { DisposableCollection, CommandRegistry, MenuModelRegistry, CommandContribution, MenuContribution, Command } from '@theia/core';
 import {
-    AbstractViewContribution, StatusBar, StatusBarAlignment, DiffUris, StatusBarEntry,
-    FrontendApplicationContribution, FrontendApplication, Widget
+    Command,
+    CommandContribution,
+    CommandRegistry,
+    DisposableCollection,
+    Emitter,
+    Event,
+    MenuContribution,
+    MenuModelRegistry
+} from '@theia/core';
+import {
+    AbstractViewContribution,
+    DiffUris,
+    FrontendApplication,
+    FrontendApplicationContribution,
+    LabelProvider,
+    StatusBar,
+    StatusBarEntry,
+    Widget
 } from '@theia/core/lib/browser';
-import { TabBarToolbarContribution, TabBarToolbarRegistry } from '@theia/core/lib/browser/shell/tab-bar-toolbar';
-import { EditorManager, EditorWidget, EditorOpenerOptions, EditorContextMenu, EDITOR_CONTEXT_MENU } from '@theia/editor/lib/browser';
-import { GitFileChange, GitFileStatus } from '../common';
-import { GitWidget } from './git-widget';
-import { GitRepositoryTracker } from './git-repository-tracker';
-import { GitQuickOpenService, GitAction } from './git-quick-open-service';
-import { GitSyncService } from './git-sync-service';
-import { WorkspaceService } from '@theia/workspace/lib/browser';
-import { GitPrompt } from '../common/git-prompt';
+import {TabBarToolbarContribution, TabBarToolbarRegistry} from '@theia/core/lib/browser/shell/tab-bar-toolbar';
+import {
+    EDITOR_CONTEXT_MENU,
+    EditorContextMenu,
+    EditorManager,
+    EditorOpenerOptions,
+    EditorWidget
+} from '@theia/editor/lib/browser';
+import {Git, GitFileChange, GitFileStatus, Repository, WorkingDirectoryStatus} from '../common';
+import {GitWidget} from './git-widget';
+import {GitRepositoryTracker} from './git-repository-tracker';
+import {GitAction, GitQuickOpenService} from './git-quick-open-service';
+import {GitSyncService} from './git-sync-service';
+import {WorkspaceService} from '@theia/workspace/lib/browser';
+import {GitPrompt} from '../common/git-prompt';
+import {
+    ScmCommand,
+    ScmProvider,
+    ScmRepository,
+    ScmResource,
+    ScmResourceGroup,
+    ScmService
+} from '@theia/scm/lib/browser';
+import {GitRepositoryProvider} from './git-repository-provider';
+import {GitCommitMessageValidator} from '../browser/git-commit-message-validator';
+import {GitErrorHandler} from '../browser/git-error-handler';
+import {GIT_RESOURCE_SCHEME} from './git-resource';
+import {
+    ScmMenuContribution,
+    ScmTitleRegistry
+} from '@theia/scm/lib/browser/scm-title-registry';
+import {ScmWidget} from '@theia/scm/lib/browser/scm-widget';
+import {
+    ScmResourceComaandContribution,
+    ScmResourceCommandRegistry
+} from '@theia/scm/lib/browser/scm-resource-command-registry';
 
 export const GIT_WIDGET_FACTORY_ID = 'git';
 
@@ -108,13 +150,18 @@ export namespace GIT_COMMANDS {
 
 @injectable()
 export class GitViewContribution extends AbstractViewContribution<GitWidget>
-    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution {
-
+    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmMenuContribution, ScmResourceComaandContribution {
+    // private static GROUP_ID = 0;
     static GIT_SELECTED_REPOSITORY = 'git-selected-repository';
     static GIT_REPOSITORY_STATUS = 'git-repository-status';
     static GIT_SYNC_STATUS = 'git-sync-status';
 
     protected toDispose = new DisposableCollection();
+
+    private dirtyRepositories: Repository[] = [];
+    private scmProviders: ScmProvider[] = [];
+    private stagedChanges: GitFileChange[] = [];
+    private mergeChanges: GitFileChange[] = [];
 
     @inject(StatusBar) protected readonly statusBar: StatusBar;
     @inject(EditorManager) protected readonly editorManager: EditorManager;
@@ -123,6 +170,14 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
     @inject(GitSyncService) protected readonly syncService: GitSyncService;
     @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService;
     @inject(GitPrompt) protected readonly prompt: GitPrompt;
+    @inject(ScmService) protected readonly scmService: ScmService;
+    @inject(GitRepositoryProvider) protected readonly repositoryProvider: GitRepositoryProvider;
+    @inject(GitCommitMessageValidator) protected readonly commitMessageValidator: GitCommitMessageValidator;
+    @inject(CommandRegistry) protected readonly commandRegistry: CommandRegistry;
+    @inject(Git) protected readonly git: Git;
+    @inject(GitErrorHandler)protected readonly gitErrorHandler: GitErrorHandler;
+    @inject(LabelProvider) protected readonly labelProvider: LabelProvider;
+    @inject(ScmWidget) protected readonly scmWidget: ScmWidget;
 
     constructor() {
         super({
@@ -142,27 +197,19 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
     }
 
     onStart(): void {
-        this.repositoryTracker.onDidChangeRepository(repository => {
+        this.repositoryProvider.allRepositories.forEach(repository => this.registerScmProvider(repository));
+        this.dirtyRepositories = this.repositoryProvider.allRepositories;
+        this.scmService.onDidChangeSelectedRepositories(scmRepository => {
+            const repository = this.repositoryProvider.allRepositories.find(repo => repo.localUri === scmRepository.provider.rootUri);
             if (repository) {
-                if (this.hasMultipleRepositories()) {
-                    const path = new URI(repository.localUri).path;
-                    this.statusBar.setElement(GitViewContribution.GIT_SELECTED_REPOSITORY, {
-                        text: `$(database) ${path.base}`,
-                        alignment: StatusBarAlignment.LEFT,
-                        priority: 102,
-                        command: GIT_COMMANDS.CHANGE_REPOSITORY.id,
-                        tooltip: path.toString()
-                    });
-                } else {
-                    this.statusBar.removeElement(GitViewContribution.GIT_SELECTED_REPOSITORY);
-                }
+                this.repositoryProvider.selectedRepository = repository;
             } else {
-                this.statusBar.removeElement(GitViewContribution.GIT_SELECTED_REPOSITORY);
                 this.statusBar.removeElement(GitViewContribution.GIT_REPOSITORY_STATUS);
                 this.statusBar.removeElement(GitViewContribution.GIT_SYNC_STATUS);
             }
         });
         this.repositoryTracker.onGitEvent(event => {
+            this.checkNewOrRemovedRepositories();
             const { status } = event;
             const branch = status.branch ? status.branch : status.currentHead ? status.currentHead.substring(0, 8) : 'NO-HEAD';
             let dirty = '';
@@ -179,42 +226,235 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
                     dirty = '*';
                 }
             }
-            this.statusBar.setElement(GitViewContribution.GIT_REPOSITORY_STATUS, {
-                text: `$(code-fork) ${branch}${dirty}`,
-                alignment: StatusBarAlignment.LEFT,
-                priority: 101,
-                command: GIT_COMMANDS.CHECKOUT.id
-            });
-            this.updateSyncStatusBarEntry();
+            const scmProvider = this.scmProviders.find(provider => provider.rootUri === event.source.localUri);
+            if (scmProvider) {
+                const provider = (scmProvider as ScmProviderImpl);
+                this.getGroups(status, provider).then(groups => {
+                    provider.groups = groups;
+                    provider.fireChangeStatusBarCommands([{
+                        id: GIT_COMMANDS.CHECKOUT.id,
+                        text: `$(code-fork) ${branch}${dirty}`,
+                        command: GIT_COMMANDS.CHECKOUT.id
+                    }]);
+                    provider.fireChangeResources();
+                });
+            }
+            this.updateSyncStatusBarEntry(event.source.localUri);
         });
-        this.syncService.onDidChange(() => this.updateSyncStatusBarEntry());
+        this.syncService.onDidChange(() => this.updateSyncStatusBarEntry(
+            this.repositoryProvider.selectedRepository
+            ? this.repositoryProvider.selectedRepository.localUri
+            : undefined)
+        );
+    }
+
+    protected async getGroups(status: WorkingDirectoryStatus | undefined, provider: ScmProvider): Promise<ScmResourceGroup[]> {
+        const groups: ScmResourceGroup[] = [];
+        const stagedChanges = [];
+        const unstagedChanges = [];
+        const mergeChanges = [];
+        if (status) {
+            for (const change of status.changes) {
+                if (GitFileStatus[GitFileStatus.Conflicted.valueOf()] !== GitFileStatus[change.status]) {
+                    if (change.staged) {
+                        stagedChanges.push(change);
+                    } else {
+                        unstagedChanges.push(change);
+                    }
+                } else {
+                    if (!change.staged) {
+                        mergeChanges.push(change);
+                    }
+                }
+            }
+        }
+        if (stagedChanges.length > 0) {
+            groups.push(await this.getGroup('Staged changes', provider, stagedChanges));
+        }
+        if (unstagedChanges.length > 0) {
+            groups.push(await this.getGroup('Changes', provider, unstagedChanges));
+        }
+        if (mergeChanges.length > 0) {
+            groups.push(await this.getGroup('Merged Changes', provider, mergeChanges));
+        }
+        this.stagedChanges = stagedChanges;
+        this.mergeChanges = mergeChanges;
+        return groups;
+    }
+
+    private async getGroup(label: string, provider: ScmProvider, changes: GitFileChange[]): Promise<ScmResourceGroup> {
+        const scmResources: ScmResource[] = await Promise.all(changes.map(async change => {
+            const icon = await this.labelProvider.getIcon(new URI(change.uri));
+            const resource: ScmResource = {
+                sourceUri: new URI(change.uri),
+                decorations: {icon, letter: GitFileStatus.toAbbreviation(change.status, change.staged), color: this.getColor(change.status)},
+                async open(): Promise<void> {
+                    open();
+                }
+            };
+            const open = () => {
+                const uriToOpen = this.getUriToOpen(change);
+                this.editorManager.open(uriToOpen, {mode: 'activate'});
+            };
+            return resource;
+        }));
+        const sort = (l: ScmResource, r: ScmResource) =>
+            l.sourceUri.toString().substring(l.sourceUri.toString().lastIndexOf('/')).localeCompare(r.sourceUri.toString().substring(r.sourceUri.toString().lastIndexOf('/')));
+        return {
+            label,
+            hideWhenEmpty: false,
+            // id: `${GitViewContribution.GROUP_ID ++}`,
+            id: label,
+            provider,
+            onDidChange: provider.onDidChange,
+            resources: scmResources.sort(sort)
+        };
+    }
+
+    getUriToOpen(change: GitFileChange): URI {
+        const changeUri: URI = new URI(change.uri);
+        if (change.status !== GitFileStatus.New) {
+            if (change.staged) {
+                return DiffUris.encode(
+                    changeUri.withScheme(GIT_RESOURCE_SCHEME).withQuery('HEAD'),
+                    changeUri.withScheme(GIT_RESOURCE_SCHEME),
+                    changeUri.displayName + ' (Index)');
+            }
+            if (this.stagedChanges.find(c => c.uri === change.uri)) {
+                return DiffUris.encode(
+                    changeUri.withScheme(GIT_RESOURCE_SCHEME),
+                    changeUri,
+                    changeUri.displayName + ' (Working tree)');
+            }
+            if (this.mergeChanges.find(c => c.uri === change.uri)) {
+                return changeUri;
+            }
+            return DiffUris.encode(
+                changeUri.withScheme(GIT_RESOURCE_SCHEME).withQuery('HEAD'),
+                changeUri,
+                changeUri.displayName + ' (Working tree)');
+        }
+        if (change.staged) {
+            return changeUri.withScheme(GIT_RESOURCE_SCHEME);
+        }
+        if (this.stagedChanges.find(c => c.uri === change.uri)) {
+            return DiffUris.encode(
+                changeUri.withScheme(GIT_RESOURCE_SCHEME),
+                changeUri,
+                changeUri.displayName + ' (Working tree)');
+        }
+        return changeUri;
+    }
+
+    private getColor(status: GitFileStatus): string {
+        if (status === GitFileStatus.New) {
+            return 'var(--theia-success-color0)';
+        } else if (status === GitFileStatus.Deleted) {
+            return 'var(--theia-warn-color0)';
+        } else if (status === GitFileStatus.Conflicted) {
+            return 'var(--theia-error-color0)';
+        } else {
+            return 'var(--theia-brand-color0)';
+        }
+    }
+
+    /** Detect and handle added or removed repositories. */
+    private checkNewOrRemovedRepositories() {
+        const added =
+            this.repositoryProvider
+                .allRepositories
+                .find(repo => this.dirtyRepositories.every(dirtyRepo => dirtyRepo.localUri !== repo.localUri));
+        if (added) {
+            this.registerScmProvider(added);
+        }
+        const removed =
+            this.dirtyRepositories
+                .find(dirtyRepo => this.repositoryProvider.allRepositories.every(repo => repo.localUri !== dirtyRepo.localUri));
+        if (removed) {
+            const removedScmRepo = this.scmService.repositories.find(scmRepo => scmRepo.provider.rootUri === removed.localUri);
+            if (removedScmRepo) {
+                removedScmRepo.dispose();
+                const index = this.scmProviders.indexOf(removedScmRepo.provider);
+                if (index > -1) {
+                    this.scmProviders.splice(index, 1);
+                }
+            }
+        }
+        this.dirtyRepositories = this.repositoryProvider.allRepositories;
+    }
+
+    private registerScmProvider(repository: Repository): ScmRepository {
+        const uri = repository.localUri;
+        const disposableCollection = new DisposableCollection();
+        const onDidChangeResourcesEmitter = new Emitter<void>();
+        const onDidChangeRepositoryEmitter = new Emitter<void>();
+        disposableCollection.push(onDidChangeRepositoryEmitter);
+        disposableCollection.push(onDidChangeResourcesEmitter);
+        const provider = new ScmProviderImpl('Git', uri.substring(uri.lastIndexOf('/') + 1), uri);
+        this.scmProviders.push(provider);
+        const repo =  this.scmService.registerScmProvider(provider);
+        // const commit = (scmRepository: ScmRepository, message: string) => {
+        //     const localUri = scmRepository.provider.rootUri;
+        //     if (localUri) {
+        //         this.doCommit({ localUri }, message);
+        //     }
+        // };
+        // this.commandRegistry.registerCommand({ id: 'git_scm_commit' },
+        //     {
+        //     // tslint:disable-next-line:no-any
+        //     execute(...args): any {
+        //         if (args.length > 1) {
+        //             commit(args[0], args[1]);
+        //         }
+        //     }
+        // });
+        repo.input.placeholder = 'Commit Message';
+        repo.input.validateInput = async input => {
+            const validate = await this.commitMessageValidator.validate(input);
+            if (validate) {
+                const { message, status } = validate;
+                return { message, type: status };
+            }
+        };
+        return repo;
+    }
+
+    async doCommit(repository: Repository, message: string, options?: 'amend' | 'sign-off') {
+        try {
+            // We can make sure, repository exists, otherwise we would not have this button.
+            const signOff = options === 'sign-off';
+            const amend = options === 'amend';
+            await this.git.commit(repository, message, { signOff, amend });
+        } catch (error) {
+            this.gitErrorHandler.handleError(error);
+        }
     }
 
     registerMenus(menus: MenuModelRegistry): void {
         super.registerMenus(menus);
         [GIT_COMMANDS.FETCH, GIT_COMMANDS.PULL_DEFAULT, GIT_COMMANDS.PULL, GIT_COMMANDS.PUSH_DEFAULT, GIT_COMMANDS.PUSH, GIT_COMMANDS.MERGE].forEach(command =>
-            menus.registerMenuAction(GitWidget.ContextMenu.OTHER_GROUP, {
+            menus.registerMenuAction(ScmWidget.ContextMenu.OTHER_GROUP, {
                 commandId: command.id,
                 label: command.label.slice('Git: '.length)
             })
         );
-        menus.registerMenuAction(GitWidget.ContextMenu.COMMIT_GROUP, {
+        menus.registerMenuAction(ScmWidget.ContextMenu.INPUT_GROUP, {
             commandId: GIT_COMMANDS.COMMIT_AMEND.id,
             label: 'Commit (Amend)'
         });
-        menus.registerMenuAction(GitWidget.ContextMenu.COMMIT_GROUP, {
+        menus.registerMenuAction(ScmWidget.ContextMenu.INPUT_GROUP, {
             commandId: GIT_COMMANDS.COMMIT_SIGN_OFF.id,
             label: 'Commit (Signed Off)'
         });
-        menus.registerMenuAction(GitWidget.ContextMenu.BATCH, {
+        menus.registerMenuAction(ScmWidget.ContextMenu.BATCH, {
             commandId: GIT_COMMANDS.STAGE_ALL.id,
             label: 'Stage All Changes'
         });
-        menus.registerMenuAction(GitWidget.ContextMenu.BATCH, {
+        menus.registerMenuAction(ScmWidget.ContextMenu.BATCH, {
             commandId: GIT_COMMANDS.UNSTAGE_ALL.id,
             label: 'Unstage All Changes'
         });
-        menus.registerMenuAction(GitWidget.ContextMenu.BATCH, {
+        menus.registerMenuAction(ScmWidget.ContextMenu.BATCH, {
             commandId: GIT_COMMANDS.DISCARD_ALL.id,
             label: 'Discard All Changes'
         });
@@ -341,6 +581,21 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
                 return this.quickOpenService.clone(url, folder, branch);
             }
         });
+        const commit = (scmRepository: ScmRepository, message: string) => {
+            const localUri = scmRepository.provider.rootUri;
+            if (localUri) {
+                this.doCommit({ localUri }, message);
+            }
+        };
+        registry.registerCommand({ id: 'git_scm_commit' },
+            {
+                // tslint:disable-next-line:no-any
+                execute(...args): any {
+                    if (args.length > 1) {
+                        commit(args[0], args[1]);
+                    }
+                }
+            });
     }
 
     registerToolbarItems(registry: TabBarToolbarRegistry): void {
@@ -412,14 +667,18 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
         return this.repositoryTracker.allRepositories.length > 1;
     }
 
-    protected updateSyncStatusBarEntry(): void {
+    protected updateSyncStatusBarEntry(repositoryUri: string | undefined): void {
         const entry = this.getStatusBarEntry();
-        if (entry) {
-            this.statusBar.setElement(GitViewContribution.GIT_SYNC_STATUS, {
-                alignment: StatusBarAlignment.LEFT,
-                priority: 100,
-                ...entry
-            });
+        if (entry && repositoryUri) {
+            const scmProvider = this.scmProviders.find(provider => provider.rootUri === repositoryUri);
+            if (scmProvider) {
+                (scmProvider as ScmProviderImpl).fireChangeStatusBarCommands([{
+                    id: 'vcs-sync-status',
+                    text: entry.text,
+                    tooltip: entry.tooltip,
+                    command: entry.command,
+                }]);
+            }
         } else {
             this.statusBar.removeElement(GitViewContribution.GIT_SYNC_STATUS);
         }
@@ -449,6 +708,65 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
             tooltip: 'Publish Changes'
         };
     }
+
+    registerScmMenuItems(registry: ScmTitleRegistry): void {
+        const refresh = () => {
+            this.repositoryProvider.refresh();
+        };
+        this.commandRegistry.registerCommand({id: 'git-refresh', label: 'Refresh', iconClass: 'fa fa-refresh'}, {
+            execute() {
+                refresh();
+            }
+        });
+        const signOff = () => this.doSignOff();
+        this.commandRegistry.registerCommand({id: 'git-commit-add-sign-off', label: 'Add Signed-off-by', iconClass: 'fa fa-pencil-square-o '}, {
+            execute() {
+                signOff();
+            }
+        });
+        registry.registerItem({
+            id: 'git-refresh',
+            command: 'git-refresh'
+        });
+        registry.registerItem({
+            id: 'git-commit-add-sign-off',
+            command: 'git-commit-add-sign-off'
+        });
+    }
+
+    registerScmResourceCommands(registry: ScmResourceCommandRegistry) {
+        registry.registerItem('Changes', {
+            id: 'git-refresh',
+            command: 'git-refresh'
+        });
+    }
+
+    protected async doSignOff() {
+        const { selectedRepository } = this.repositoryProvider;
+        if (selectedRepository) {
+            const [username, email] = await this.getUserConfig(selectedRepository);
+            const signOff = `\n\nSigned-off-by: ${username} <${email}>`;
+            const commitTextArea = document.getElementById(ScmWidget.Styles.INPUT_MESSAGE) as HTMLTextAreaElement;
+            if (commitTextArea) {
+                const content = commitTextArea.value;
+                if (content.endsWith(signOff)) {
+                    commitTextArea.value = content.substr(0, content.length - signOff.length);
+                } else {
+                    commitTextArea.value = `${content}${signOff}`;
+                }
+                this.scmWidget.resize(commitTextArea);
+                commitTextArea.focus();
+            }
+        }
+    }
+
+    protected async getUserConfig(repository: Repository): Promise<[string, string]> {
+        const [username, email] = (await Promise.all([
+            this.git.exec(repository, ['config', 'user.name']),
+            this.git.exec(repository, ['config', 'user.email'])
+        ])).map(result => result.stdout.trim());
+        return [username, email];
+    }
 }
 export interface GitOpenFileOptions {
     readonly uri: URI
@@ -457,4 +775,113 @@ export interface GitOpenFileOptions {
 export interface GitOpenChangesOptions {
     readonly change: GitFileChange
     readonly options?: EditorOpenerOptions
+}
+
+export class ScmProviderImpl implements ScmProvider {
+    private static ID = 0;
+
+    private onDidChangeEmitter = new Emitter<void>();
+    private onDidChangeResourcesEmitter = new Emitter<void>();
+    private onDidChangeCommitTemplateEmitter = new Emitter<string>();
+    private onDidChangeStatusBarCommandsEmitter = new Emitter<ScmCommand[]>();
+    private disposableCollection: DisposableCollection = new DisposableCollection();
+    private _groups: ScmResourceGroup[];
+    private _count: number | undefined;
+
+    constructor(
+        private _contextValue: string,
+        private _label: string,
+        private _rootUri: string | undefined,
+    ) {
+        this.disposableCollection.push(this.onDidChangeEmitter);
+        this.disposableCollection.push(this.onDidChangeResourcesEmitter);
+        this.disposableCollection.push(this.onDidChangeCommitTemplateEmitter);
+        this.disposableCollection.push(this.onDidChangeStatusBarCommandsEmitter);
+    }
+
+    private _id = `scm${ScmProviderImpl.ID ++}`;
+
+    get id(): string {
+        return this._id;
+    }
+    get groups(): ScmResourceGroup[] {
+        return this._groups;
+    }
+
+    set groups(groups: ScmResourceGroup[]) {
+        this._groups = groups;
+    }
+
+    get label(): string {
+        return this._label;
+    }
+
+    get rootUri(): string | undefined {
+        return this._rootUri;
+    }
+
+    get contextValue(): string {
+        return this._contextValue;
+    }
+
+    get onDidChangeResources(): Event<void> {
+        return this.onDidChangeResourcesEmitter.event;
+    }
+
+    get commitTemplate(): string | undefined {
+        return undefined;
+    }
+
+    get acceptInputCommand(): ScmCommand | undefined {
+        return  {
+                id: 'git_scm_commit',
+                tooltip: 'Commit all the staged changes',
+                text: 'Commit',
+                command: 'commit'
+            };
+    }
+
+    get statusBarCommands(): ScmCommand[] | undefined {
+        return undefined;
+    }
+
+    get count(): number | undefined {
+        return this._count;
+    }
+
+    set count(count: number| undefined) {
+        this._count = count;
+    }
+
+    get onDidChangeCommitTemplate(): Event<string> {
+        return this.onDidChangeCommitTemplateEmitter.event;
+    }
+
+    get onDidChangeStatusBarCommands(): Event<ScmCommand[]> {
+        return this.onDidChangeStatusBarCommandsEmitter.event;
+    }
+
+    get onDidChange(): Event<void> {
+        return this.onDidChangeEmitter.event;
+    }
+
+    dispose(): void {
+        this.disposableCollection.dispose();
+    }
+
+    async getOriginalResource(uri: URI): Promise<URI | undefined> {
+        return undefined;
+    }
+
+    fireChangeStatusBarCommands(commands: ScmCommand[]): void {
+        this.onDidChangeStatusBarCommandsEmitter.fire(commands);
+    }
+
+    fireChangeResources(): void {
+        this.onDidChangeResourcesEmitter.fire(undefined);
+    }
+
+    fireChange(): void {
+        this.onDidChangeEmitter.fire(undefined);
+    }
 }
