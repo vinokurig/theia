@@ -47,8 +47,7 @@ export class ScmContribution extends AbstractViewContribution<ScmWidget> impleme
                 area: 'left',
                 rank: 300
             },
-            toggleCommandId: 'scmView:toggle',
-            toggleKeybinding: 'ctrlcmd+shift+q'
+            toggleCommandId: 'scmView:toggle'
         });
     }
 
@@ -85,7 +84,7 @@ export class ScmContribution extends AbstractViewContribution<ScmWidget> impleme
         this.scmService.onDidChangeSelectedRepositories(repository => {
             const path = new URI(repository.provider.rootUri).path;
             this.statusBar.setElement(CHANGE_REPOSITORY.id, {
-                text: `$(database) ${path.base}`,
+                text: `$(database) ${path.base}: ${repository.provider.contextValue}`,
                 tooltip: path.toString(),
                 command: CHANGE_REPOSITORY.id,
                 alignment: StatusBarAlignment.LEFT,

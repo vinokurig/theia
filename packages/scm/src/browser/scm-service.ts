@@ -24,7 +24,7 @@ export interface ScmService extends Disposable {
     readonly onDidRemoveRepository: Event<ScmRepository>;
 
     readonly repositories: ScmRepository[];
-    readonly selectedRepositories: ScmRepository[];
+    selectedRepository: ScmRepository | undefined;
     readonly onDidChangeSelectedRepositories: Event<ScmRepository>;
 
     registerScmProvider(provider: ScmProvider): ScmRepository;
@@ -146,7 +146,7 @@ export interface ScmRepository extends Disposable {
 export class ScmServiceImpl implements ScmService {
     private providerIds = new Set<string>();
     private _repositories: ScmRepository[] = [];
-    private _selectedRepositories: ScmRepository[] = [];
+    private _selectedRepository: ScmRepository | undefined;
 
     private disposableCollection: DisposableCollection = new DisposableCollection();
     private onDidChangeSelectedRepositoriesEmitter = new Emitter<ScmRepository>();
@@ -165,8 +165,15 @@ export class ScmServiceImpl implements ScmService {
         return [...this._repositories];
     }
 
-    get selectedRepositories(): ScmRepository[] {
-        return [...this._selectedRepositories];
+    get selectedRepository(): ScmRepository | undefined {
+        return this._selectedRepository;
+    }
+
+    set selectedRepository(repository: ScmRepository | undefined) {
+        this._selectedRepository = repository;
+        if (repository) {
+            this.onDidChangeSelectedRepositoriesEmitter.fire(repository);
+        }
     }
 
     get onDidAddRepository(): Event<ScmRepository> {
@@ -190,33 +197,36 @@ export class ScmServiceImpl implements ScmService {
             if (index < 0) {
                 return;
             }
-            selectedDisposable.dispose();
+            // selectedDisposable.dispose();
             this.providerIds.delete(provider.id);
             this._repositories.splice(index, 1);
             this.onDidRemoveProviderEmitter.fire(repository);
-            this.onDidChangeSelection();
+            // this.onDidChangeSelection();
         });
 
         const repository = new ScmRepositoryImpl(provider, disposable);
-        const selectedDisposable = repository.onDidChangeSelection(this.onDidChangeSelection, this);
+        // const selectedDisposable = repository.onDidChangeSelection(this.onDidChangeSelection, this);
 
         this._repositories.push(repository);
         this.onDidAddProviderEmitter.fire(repository);
 
         // automatically select the first repository
         if (this._repositories.length === 1) {
-            repository.setSelected(true);
+            // repository.setSelected(true);
+            this.selectedRepository = repository;
         }
 
         return repository;
     }
 
-    private onDidChangeSelection(): void {
-        this._selectedRepositories = this._repositories.filter(r => r.selected);
-        if (this.selectedRepositories.length > 0) {
-            this.onDidChangeSelectedRepositoriesEmitter.fire(this.selectedRepositories[0]);
-        }
-    }
+    // private onDidChangeSelection(): void {
+    //     // this._selectedRepositories = this._repositories.filter(r => r.selected);
+    //     // if (this.selectedRepositories.length > 0) {
+    //     // }
+    //     if (this.selectedRepository) {
+    //         this.onDidChangeSelectedRepositoriesEmitter.fire(this.selectedRepository);
+    //     }
+    // }
 
     dispose(): void {
         this.disposableCollection.dispose();

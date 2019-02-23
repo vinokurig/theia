@@ -17,8 +17,8 @@ import {FrontendApplicationContribution} from '@theia/core/lib/browser';
 import {injectable, named, inject} from 'inversify';
 import {ContributionProvider} from '@theia/core';
 
-export const ScmResourceComaandContribution = Symbol('ScmResourceComaandContribution');
-export interface ScmResourceComaandContribution {
+export const ScmResourceCommandContribution = Symbol('ScmResourceCommandContribution');
+export interface ScmResourceCommandContribution {
     registerScmResourceCommands(registry: ScmResourceCommandRegistry): void;
 }
 
@@ -32,8 +32,8 @@ export class ScmResourceCommandRegistry implements FrontendApplicationContributi
     private items: ScmCommandItem[] = [];
 
     @inject(ContributionProvider)
-    @named(ScmResourceComaandContribution)
-    protected readonly contributionProvider: ContributionProvider<ScmResourceComaandContribution>;
+    @named(ScmResourceCommandContribution)
+    protected readonly contributionProvider: ContributionProvider<ScmResourceCommandContribution>;
 
     onStart(): void {
         const contributions = this.contributionProvider.getContributions();

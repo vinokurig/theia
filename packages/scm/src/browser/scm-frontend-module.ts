@@ -26,7 +26,7 @@ import {
     ScmMenuContribution,
     ScmTitleRegistry
 } from './scm-title-registry';
-import {ScmResourceComaandContribution, ScmResourceCommandRegistry} from './scm-resource-command-registry';
+import {ScmResourceCommandContribution, ScmResourceCommandRegistry} from './scm-resource-command-registry';
 import {ScmQuickOpenService} from './scm-quick-open-service';
 
 export default new ContainerModule(bind => {
@@ -50,5 +50,5 @@ export default new ContainerModule(bind => {
     bind(ScmResourceCommandRegistry).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(ScmResourceCommandRegistry);
 
-    bindContributionProvider(bind, ScmResourceComaandContribution);
+    bindContributionProvider(bind, ScmResourceCommandContribution);
 });

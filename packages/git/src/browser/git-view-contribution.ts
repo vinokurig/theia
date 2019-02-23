@@ -68,7 +68,7 @@ import {
 } from '@theia/scm/lib/browser/scm-title-registry';
 import {ScmWidget} from '@theia/scm/lib/browser/scm-widget';
 import {
-    ScmResourceComaandContribution,
+    ScmResourceCommandContribution,
     ScmResourceCommandRegistry
 } from '@theia/scm/lib/browser/scm-resource-command-registry';
 
@@ -150,7 +150,7 @@ export namespace GIT_COMMANDS {
 
 @injectable()
 export class GitViewContribution extends AbstractViewContribution<GitWidget>
-    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmMenuContribution, ScmResourceComaandContribution {
+    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmMenuContribution, ScmResourceCommandContribution {
     // private static GROUP_ID = 0;
     static GIT_SELECTED_REPOSITORY = 'git-selected-repository';
     static GIT_REPOSITORY_STATUS = 'git-repository-status';
@@ -393,21 +393,6 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
         const provider = new ScmProviderImpl('Git', uri.substring(uri.lastIndexOf('/') + 1), uri);
         this.scmProviders.push(provider);
         const repo =  this.scmService.registerScmProvider(provider);
-        // const commit = (scmRepository: ScmRepository, message: string) => {
-        //     const localUri = scmRepository.provider.rootUri;
-        //     if (localUri) {
-        //         this.doCommit({ localUri }, message);
-        //     }
-        // };
-        // this.commandRegistry.registerCommand({ id: 'git_scm_commit' },
-        //     {
-        //     // tslint:disable-next-line:no-any
-        //     execute(...args): any {
-        //         if (args.length > 1) {
-        //             commit(args[0], args[1]);
-        //         }
-        //     }
-        // });
         repo.input.placeholder = 'Commit Message';
         repo.input.validateInput = async input => {
             const validate = await this.commitMessageValidator.validate(input);
@@ -734,7 +719,7 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
         });
     }
 
-    registerScmResourceCommands(registry: ScmResourceCommandRegistry) {
+    registerScmResourceCommands(registry: ScmResourceCommandRegistry): void {
         registry.registerItem('Changes', {
             id: 'git-refresh',
             command: 'git-refresh'

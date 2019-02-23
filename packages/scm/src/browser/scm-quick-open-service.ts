@@ -41,8 +41,9 @@ export class ScmQuickOpenService {
             const items = await Promise.all(repositories.map(async repository => {
                 const uri = new URI(repository.provider.rootUri);
                 const execute = () => {
-                    this.scmService.selectedRepositories.forEach(scmRepo => scmRepo.setSelected(false));
-                    repository.setSelected(true);
+                    // this.scmService.selectedRepositories.forEach(scmRepo => scmRepo.setSelected(false));
+                    // repository.setSelected(true);
+                    this.scmService.selectedRepository = repository;
                 };
                 const toLabel = () => uri.path.base;
                 const fsPath = await this.fileSystem.getFsPath(uri.toString());
