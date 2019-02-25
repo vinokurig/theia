@@ -38,7 +38,8 @@ import { GitSyncService } from './git-sync-service';
 import { GitErrorHandler } from './git-error-handler';
 
 import '../../src/browser/style/index.css';
-import {ScmMenuContribution} from '@theia/scm/lib/browser/scm-title-registry';
+import {ScmTitleCommandsContribution} from '@theia/scm/lib/browser/scm-title-command-registry';
+import {ScmResourceCommandContribution} from '@theia/scm/lib/browser/scm-resource-command-registry';
 
 export default new ContainerModule(bind => {
     bindGitPreferences(bind);
@@ -55,7 +56,8 @@ export default new ContainerModule(bind => {
     bindViewContribution(bind, GitViewContribution);
     bind(FrontendApplicationContribution).toService(GitViewContribution);
     bind(TabBarToolbarContribution).toService(GitViewContribution);
-    bind(ScmMenuContribution).toService(GitViewContribution);
+    bind(ScmTitleCommandsContribution).toService(GitViewContribution);
+    bind(ScmResourceCommandContribution).toService(GitViewContribution);
 
     bind(GitWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({

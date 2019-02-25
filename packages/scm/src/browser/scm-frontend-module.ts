@@ -23,9 +23,9 @@ import {bindContributionProvider} from '@theia/core';
 import { ScmWidget} from './scm-widget';
 import '../../src/browser/style/index.css';
 import {
-    ScmMenuContribution,
-    ScmTitleRegistry
-} from './scm-title-registry';
+    ScmTitleCommandsContribution,
+    ScmTitleCommandRegistry
+} from './scm-title-command-registry';
 import {ScmResourceCommandContribution, ScmResourceCommandRegistry} from './scm-resource-command-registry';
 import {ScmQuickOpenService} from './scm-quick-open-service';
 
@@ -42,10 +42,10 @@ export default new ContainerModule(bind => {
     bindViewContribution(bind, ScmContribution);
     bind(FrontendApplicationContribution).toService(ScmContribution);
 
-    bind(ScmTitleRegistry).toSelf().inSingletonScope();
-    bind(FrontendApplicationContribution).toService(ScmTitleRegistry);
+    bind(ScmTitleCommandRegistry).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toService(ScmTitleCommandRegistry);
 
-    bindContributionProvider(bind, ScmMenuContribution);
+    bindContributionProvider(bind, ScmTitleCommandsContribution);
 
     bind(ScmResourceCommandRegistry).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(ScmResourceCommandRegistry);

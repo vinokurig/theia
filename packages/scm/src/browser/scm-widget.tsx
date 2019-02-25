@@ -20,7 +20,7 @@ import { AlertMessage } from '@theia/core/lib/browser/widgets/alert-message';
 import {InputValidator, ScmInput, ScmRepository, ScmResource, ScmResourceGroup, ScmService} from './scm-service';
 import {CommandRegistry, MenuPath} from '@theia/core';
 import {EditorManager} from '@theia/editor/lib/browser';
-import {ScmTitleItem, ScmTitleRegistry} from './scm-title-registry';
+import {ScmTitleCommandRegistry} from './scm-title-command-registry';
 import {ScmResourceNode} from './scm-item-node';
 import {ScmResourceCommandRegistry} from './scm-resource-command-registry';
 
@@ -37,7 +37,7 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
 
     private selectedRepoUri: string | undefined;
 
-    @inject(ScmTitleRegistry) protected readonly scmTitleRegistry: ScmTitleRegistry;
+    @inject(ScmTitleCommandRegistry) protected readonly scmTitleRegistry: ScmTitleCommandRegistry;
     @inject(ScmResourceCommandRegistry) protected readonly scmResourceCommandRegistry: ScmResourceCommandRegistry;
     @inject(ScmService) private readonly scmService: ScmService;
     @inject(CommandRegistry) private readonly commandRegistry: CommandRegistry;
@@ -148,7 +148,7 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
     protected renderCommandBar(repository: ScmRepository | undefined): React.ReactNode {
         return <div id='commandBar' className='flexcontainer'>
             <div className='buttons'>
-                {this.scmTitleRegistry.getItems().map(item => this.renderButton(item))}
+                {this.scmTitleRegistry.getCommand().map(command => this.renderButton(command))}
                 <a className='toolbar-button' title='More...' onClick={this.showMoreToolButtons}>
                     <i className='fa fa-ellipsis-h' />
                 </a >
@@ -169,13 +169,13 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
         }
     }
 
-    private renderButton(item: ScmTitleItem): React.ReactNode {
-        const command = this.commandRegistry.getCommand(item.command);
+    private renderButton(commandId: string): React.ReactNode {
+        const command = this.commandRegistry.getCommand(commandId);
         if (command) {
             const execute = () => {
-                this.commandRegistry.executeCommand(command.id);
+                this.commandRegistry.executeCommand(commandId);
             };
-            return <a className='toolbar-button' key={item.id} >
+            return <a className='toolbar-button' >
                 <i className={command.iconClass} title={command.label} onClick={execute}/>
             </a>;
         }
@@ -293,12 +293,12 @@ export namespace ScmWidget {
 
 export namespace ScmResourceItem {
     export interface Props {
-        name: string
-        path: string
+        name: string,
+        path: string,
         icon: string,
         letter: string,
         color: string,
-        resource: ScmResourceNode;
+        resource: ScmResourceNode,
         groupId: string,
         scmResourceCommandRegistry: ScmResourceCommandRegistry,
         commandRegistry: CommandRegistry,
@@ -319,8 +319,7 @@ class ScmResourceItem extends React.Component<ScmResourceItem.Props> {
                 <span className='path'>{path}</span>
             </div>
             <div className='itemButtonsContainer'>
-                {/*{this.renderGitItemButtons()}*/}
-                {this.props.scmResourceCommandRegistry.getItems(this.props.groupId).map(item => this.renderGitItemButtons(item))}
+                {this.renderScmItemButtons()}
                 <div title={`${letter}`} className={'status'} style={style}>
                     {letter}
                 </div>
@@ -328,16 +327,23 @@ class ScmResourceItem extends React.Component<ScmResourceItem.Props> {
         </div>;
     }
 
-    protected renderGitItemButtons(item: ScmTitleItem): React.ReactNode {
-        const command = this.props.commandRegistry.getCommand(item.command);
+    protected renderScmItemButtons(): React.ReactNode {
+        const commands = this.props.scmResourceCommandRegistry.getCommands(this.props.groupId);
+        if (commands) {
+            return <div className='buttons'>
+            <div className= 'toolbar-button'>
+                {commands.map(command => this.renderScmItemButton(command))}
+            </div> </div>;
+        }
+    }
+    protected renderScmItemButton(commandId: string): React.ReactNode {
+        const command = this.props.commandRegistry.getCommand(commandId);
         if (command) {
             const execute = () => {
-                this.props.commandRegistry.executeCommand(item.command);
+                this.props.commandRegistry.executeCommand(commandId);
             };
             return <div className='buttons'>
-                <a className={command.iconClass} title={command.label} onClick={execute}>
-                    <i className='open-file' />
-                </a>
+                <a className={command.iconClass} title={command.label} onClick={execute} />
             </div>;
         }
     }
@@ -385,6 +391,7 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
             <div className='theia-header git-theia-header'>
                 {`${group.label}`}
                 {this.renderChangeCount(group.resources.length)}
+                {this.renderGroupButtons()}
             </div>
             <div>{group.resources.map(resource => this.renderScmResourceItem(resource, group.provider.rootUri))}</div>
         </div>;
@@ -394,6 +401,26 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
         if (changes) {
             return <div className='notification-count-container git-change-count'>
                 <span className='notification-count'>{changes}</span>
+            </div>;
+        }
+    }
+
+    protected renderGroupButtons(): React.ReactNode {
+        const commands = this.props.scmResourceCommandRegistry.getCommands(this.props.group.id);
+        if (commands) {
+            return <div className='git-change-list-buttons-container'>
+                {commands.map(command => this.renderGroupButton(command))}
+            </div>;
+        }
+    }
+    protected renderGroupButton(commandId: string): React.ReactNode {
+        const command = this.props.commandRegistry.getCommand(commandId);
+        if (command) {
+            const execute = () => {
+                this.props.commandRegistry.executeCommand(commandId);
+            };
+            return <div className='toolbar-button'>
+                <a className={command.iconClass} title={command.label} onClick={execute} />
             </div>;
         }
     }

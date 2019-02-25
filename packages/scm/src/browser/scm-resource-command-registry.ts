@@ -29,7 +29,7 @@ export interface ScmCommandItem {
 
 @injectable()
 export class ScmResourceCommandRegistry implements FrontendApplicationContribution {
-    private items: ScmCommandItem[] = [];
+    private commands: Map<string, string[]> = new Map();
 
     @inject(ContributionProvider)
     @named(ScmResourceCommandContribution)
@@ -42,11 +42,11 @@ export class ScmResourceCommandRegistry implements FrontendApplicationContributi
         }
     }
 
-    registerItem(groupId: string, item: ScmCommandItem): void {
-        this.items.push(item);
+    registerCommands(groupId: string, commands: string[]): void {
+        this.commands.set(groupId, commands);
     }
 
-    getItems(groupId: string): ScmCommandItem[] {
-        return this.items;
+    getCommands(groupId: string): string[] | undefined {
+        return this.commands.get(groupId);
     }
 }

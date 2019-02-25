@@ -63,9 +63,9 @@ import {GitCommitMessageValidator} from '../browser/git-commit-message-validator
 import {GitErrorHandler} from '../browser/git-error-handler';
 import {GIT_RESOURCE_SCHEME} from './git-resource';
 import {
-    ScmMenuContribution,
-    ScmTitleRegistry
-} from '@theia/scm/lib/browser/scm-title-registry';
+    ScmTitleCommandsContribution,
+    ScmTitleCommandRegistry
+} from '@theia/scm/lib/browser/scm-title-command-registry';
 import {ScmWidget} from '@theia/scm/lib/browser/scm-widget';
 import {
     ScmResourceCommandContribution,
@@ -146,11 +146,22 @@ export namespace GIT_COMMANDS {
     export const DISCARD_ALL = {
         id: 'git.discard.all'
     };
+    export const REFRESH = {
+        id: 'git-refresh',
+        label: 'Refresh',
+        iconClass: 'fa fa-refresh'
+    };
+
+    export const COMMIT_ADD_SIGN_OFF = {
+        id: 'git-commit-add-sign-off',
+        label: 'Add Signed-off-by',
+        iconClass: 'fa fa-pencil-square-o '
+    };
 }
 
 @injectable()
 export class GitViewContribution extends AbstractViewContribution<GitWidget>
-    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmMenuContribution, ScmResourceCommandContribution {
+    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmTitleCommandsContribution, ScmResourceCommandContribution {
     // private static GROUP_ID = 0;
     static GIT_SELECTED_REPOSITORY = 'git-selected-repository';
     static GIT_REPOSITORY_STATUS = 'git-repository-status';
@@ -581,6 +592,27 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
                     }
                 }
             });
+        const refresh = () => {
+            this.repositoryProvider.refresh();
+        };
+        registry.registerCommand(GIT_COMMANDS.REFRESH, {
+            // tslint:disable-next-line:no-any
+            execute(...args): any {
+                refresh();
+            }
+        });
+        const signOff = () => this.doSignOff();
+        this.commandRegistry.registerCommand({id: 'git-commit-add-sign-off', label: 'Add Signed-off-by', iconClass: 'fa fa-pencil-square-o '}, {
+            execute() {
+                signOff();
+            }
+        });
+        registry.registerCommand(GIT_COMMANDS.COMMIT_ADD_SIGN_OFF, {
+            // tslint:disable-next-line:no-any
+            execute(...args): any {
+                signOff();
+            }
+        });
     }
 
     registerToolbarItems(registry: TabBarToolbarRegistry): void {
@@ -694,36 +726,14 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
         };
     }
 
-    registerScmMenuItems(registry: ScmTitleRegistry): void {
-        const refresh = () => {
-            this.repositoryProvider.refresh();
-        };
-        this.commandRegistry.registerCommand({id: 'git-refresh', label: 'Refresh', iconClass: 'fa fa-refresh'}, {
-            execute() {
-                refresh();
-            }
-        });
-        const signOff = () => this.doSignOff();
-        this.commandRegistry.registerCommand({id: 'git-commit-add-sign-off', label: 'Add Signed-off-by', iconClass: 'fa fa-pencil-square-o '}, {
-            execute() {
-                signOff();
-            }
-        });
-        registry.registerItem({
-            id: 'git-refresh',
-            command: 'git-refresh'
-        });
-        registry.registerItem({
-            id: 'git-commit-add-sign-off',
-            command: 'git-commit-add-sign-off'
-        });
+    registerScmTitleCommands(registry: ScmTitleCommandRegistry): void {
+        registry.registerCommand(GIT_COMMANDS.REFRESH.id);
+        registry.registerCommand(GIT_COMMANDS.COMMIT_ADD_SIGN_OFF.id);
     }
 
     registerScmResourceCommands(registry: ScmResourceCommandRegistry): void {
-        registry.registerItem('Changes', {
-            id: 'git-refresh',
-            command: 'git-refresh'
-        });
+        registry.registerCommands('Changes', [GIT_COMMANDS.REFRESH.id]);
+        registry.registerCommands('Staged changes', [GIT_COMMANDS.REFRESH.id]);
     }
 
     protected async doSignOff() {

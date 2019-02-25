@@ -17,36 +17,31 @@ import {FrontendApplicationContribution} from '@theia/core/lib/browser';
 import {injectable, named, inject} from 'inversify';
 import {ContributionProvider} from '@theia/core';
 
-export const ScmMenuContribution = Symbol('ScmMenuContribution');
-export interface ScmMenuContribution {
-    registerScmMenuItems(registry: ScmTitleRegistry): void;
-}
-
-export interface ScmTitleItem {
-    id: string;
-    command: string;
+export const ScmTitleCommandsContribution = Symbol('ScmTitleCommandsContribution');
+export interface ScmTitleCommandsContribution {
+    registerScmTitleCommands(registry: ScmTitleCommandRegistry): void;
 }
 
 @injectable()
-export class ScmTitleRegistry implements FrontendApplicationContribution {
-    private items: ScmTitleItem[] = [];
+export class ScmTitleCommandRegistry implements FrontendApplicationContribution {
+    private commands: string[] = [];
 
     @inject(ContributionProvider)
-    @named(ScmMenuContribution)
-    protected readonly contributionProvider: ContributionProvider<ScmMenuContribution>;
+    @named(ScmTitleCommandsContribution)
+    protected readonly contributionProvider: ContributionProvider<ScmTitleCommandsContribution>;
 
     onStart(): void {
         const contributions = this.contributionProvider.getContributions();
         for (const contribution of contributions) {
-            contribution.registerScmMenuItems(this);
+            contribution.registerScmTitleCommands(this);
         }
     }
 
-    registerItem(item: ScmTitleItem): void {
-        this.items.push(item);
+    registerCommand(item: string): void {
+        this.commands.push(item);
     }
 
-    getItems(): ScmTitleItem[] {
-        return this.items;
+    getCommand(): string[] {
+        return this.commands;
     }
 }
