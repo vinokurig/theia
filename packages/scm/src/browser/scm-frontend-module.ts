@@ -28,6 +28,7 @@ import {
 } from './scm-title-command-registry';
 import {ScmResourceCommandContribution, ScmResourceCommandRegistry} from './scm-resource-command-registry';
 import {ScmQuickOpenService} from './scm-quick-open-service';
+import {ScmGroupCommandContribution, ScmGroupCommandRegistry} from './scm-group-command-registry';
 
 export default new ContainerModule(bind => {
     bind(ScmService).to(ScmServiceImpl).inSingletonScope();
@@ -51,4 +52,9 @@ export default new ContainerModule(bind => {
     bind(FrontendApplicationContribution).toService(ScmResourceCommandRegistry);
 
     bindContributionProvider(bind, ScmResourceCommandContribution);
+
+    bind(ScmGroupCommandRegistry).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toService(ScmGroupCommandRegistry);
+
+    bindContributionProvider(bind, ScmGroupCommandContribution);
 });

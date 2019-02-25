@@ -71,6 +71,7 @@ import {
     ScmResourceCommandContribution,
     ScmResourceCommandRegistry
 } from '@theia/scm/lib/browser/scm-resource-command-registry';
+import {ScmGroupCommandContribution, ScmGroupCommandRegistry} from '@theia/scm/lib/browser/scm-group-command-registry';
 
 export const GIT_WIDGET_FACTORY_ID = 'git';
 
@@ -122,7 +123,8 @@ export namespace GIT_COMMANDS {
     export const OPEN_FILE: Command = {
         id: 'git.open.file',
         category: 'Git',
-        label: 'Open File'
+        label: 'Open File',
+        iconClass: 'open-file'
     };
     export const OPEN_CHANGES: Command = {
         id: 'git.open.changes',
@@ -137,14 +139,35 @@ export namespace GIT_COMMANDS {
         id: 'git.publish',
         label: 'Git: Publish Branch'
     };
+    export const STAGE = {
+        id: 'git.stage',
+        label: 'Stage Changes',
+        iconClass: 'fa fa-plus'
+    };
     export const STAGE_ALL = {
-        id: 'git.stage.all'
+        id: 'git.stage.all',
+        label: 'Stage All Changes',
+        iconClass: 'fa fa-plus'
+    };
+    export const UNSTAGE = {
+        id: 'git.unstage',
+        iconClass: 'fa fa-minus',
+        label: 'Unstage Changes'
     };
     export const UNSTAGE_ALL = {
-        id: 'git.unstage.all'
+        id: 'git.unstage.all',
+        iconClass: 'fa fa-minus',
+        label: 'Unstage All'
+    };
+    export const DISCARD = {
+        id: 'git.discard',
+        iconClass: 'fa fa-undo',
+        label: 'Discard Changes'
     };
     export const DISCARD_ALL = {
-        id: 'git.discard.all'
+        id: 'git.discard.all',
+        iconClass: 'fa fa-undo',
+        label: 'Discard All Changes'
     };
     export const REFRESH = {
         id: 'git-refresh',
@@ -161,7 +184,8 @@ export namespace GIT_COMMANDS {
 
 @injectable()
 export class GitViewContribution extends AbstractViewContribution<GitWidget>
-    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmTitleCommandsContribution, ScmResourceCommandContribution {
+    implements FrontendApplicationContribution, CommandContribution, MenuContribution, TabBarToolbarContribution, ScmTitleCommandsContribution, ScmResourceCommandContribution,
+        ScmGroupCommandContribution {
     // private static GROUP_ID = 0;
     static GIT_SELECTED_REPOSITORY = 'git-selected-repository';
     static GIT_REPOSITORY_STATUS = 'git-repository-status';
@@ -613,6 +637,9 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
                 signOff();
             }
         });
+        registry.registerCommand(GIT_COMMANDS.UNSTAGE);
+        registry.registerCommand(GIT_COMMANDS.DISCARD);
+        registry.registerCommand(GIT_COMMANDS.STAGE );
     }
 
     registerToolbarItems(registry: TabBarToolbarRegistry): void {
@@ -732,8 +759,13 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
     }
 
     registerScmResourceCommands(registry: ScmResourceCommandRegistry): void {
-        registry.registerCommands('Changes', [GIT_COMMANDS.REFRESH.id]);
-        registry.registerCommands('Staged changes', [GIT_COMMANDS.REFRESH.id]);
+        registry.registerCommands('Changes', [GIT_COMMANDS.OPEN_FILE.id, GIT_COMMANDS.DISCARD.id, GIT_COMMANDS.STAGE.id]);
+        registry.registerCommands('Staged changes', [GIT_COMMANDS.OPEN_FILE.id, GIT_COMMANDS.UNSTAGE.id]);
+    }
+
+    registerScmGroupCommands(registry: ScmGroupCommandRegistry): void {
+        registry.registerCommands('Changes', [GIT_COMMANDS.DISCARD_ALL.id, GIT_COMMANDS.STAGE_ALL.id]);
+        registry.registerCommands('Staged changes', [GIT_COMMANDS.UNSTAGE_ALL.id]);
     }
 
     protected async doSignOff() {

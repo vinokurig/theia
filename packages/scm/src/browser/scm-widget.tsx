@@ -23,6 +23,7 @@ import {EditorManager} from '@theia/editor/lib/browser';
 import {ScmTitleCommandRegistry} from './scm-title-command-registry';
 import {ScmResourceNode} from './scm-item-node';
 import {ScmResourceCommandRegistry} from './scm-resource-command-registry';
+import {ScmGroupCommandRegistry} from './scm-group-command-registry';
 
 @injectable()
 export class ScmWidget extends ReactWidget implements StatefulWidget {
@@ -39,6 +40,7 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
 
     @inject(ScmTitleCommandRegistry) protected readonly scmTitleRegistry: ScmTitleCommandRegistry;
     @inject(ScmResourceCommandRegistry) protected readonly scmResourceCommandRegistry: ScmResourceCommandRegistry;
+    @inject(ScmGroupCommandRegistry) protected readonly scmGroupCommandRegistry: ScmGroupCommandRegistry;
     @inject(ScmService) private readonly scmService: ScmService;
     @inject(CommandRegistry) private readonly commandRegistry: CommandRegistry;
     @inject(EditorManager) protected readonly editorManager: EditorManager;
@@ -93,6 +95,7 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
                 id={this.scrollContainer}
                 repository={repository}
                 scmResourceCommandRegistry={this.scmResourceCommandRegistry}
+                scmGroupCommandRegistry={this.scmGroupCommandRegistry}
                 commandRegistry={this.commandRegistry}
             />
         </div>;
@@ -331,9 +334,8 @@ class ScmResourceItem extends React.Component<ScmResourceItem.Props> {
         const commands = this.props.scmResourceCommandRegistry.getCommands(this.props.groupId);
         if (commands) {
             return <div className='buttons'>
-            <div className= 'toolbar-button'>
                 {commands.map(command => this.renderScmItemButton(command))}
-            </div> </div>;
+            </div>;
         }
     }
     protected renderScmItemButton(commandId: string): React.ReactNode {
@@ -342,7 +344,7 @@ class ScmResourceItem extends React.Component<ScmResourceItem.Props> {
             const execute = () => {
                 this.props.commandRegistry.executeCommand(commandId);
             };
-            return <div className='buttons'>
+            return <div className='toolbar-button'>
                 <a className={command.iconClass} title={command.label} onClick={execute} />
             </div>;
         }
@@ -354,6 +356,7 @@ export namespace ScmResourceGroupsContainer {
         id: string,
         repository: ScmRepository,
         scmResourceCommandRegistry: ScmResourceCommandRegistry,
+        scmGroupCommandRegistry: ScmGroupCommandRegistry,
         commandRegistry: CommandRegistry;
     }
 }
@@ -372,6 +375,7 @@ class ScmResourceGroupsContainer extends React.Component<ScmResourceGroupsContai
                 group={group}
                 key={group.id}
                 scmResourceCommandRegistry={this.props.scmResourceCommandRegistry}
+                scmGroupCommandRegistry={this.props.scmGroupCommandRegistry}
                 commandRegistry={this.props.commandRegistry}/>;
         }
     }
@@ -380,6 +384,7 @@ namespace ScmResourceGroupContainer {
     export interface Props {
         group: ScmResourceGroup,
         scmResourceCommandRegistry: ScmResourceCommandRegistry
+        scmGroupCommandRegistry: ScmGroupCommandRegistry
         commandRegistry: CommandRegistry;
     }
 }
@@ -406,7 +411,7 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
     }
 
     protected renderGroupButtons(): React.ReactNode {
-        const commands = this.props.scmResourceCommandRegistry.getCommands(this.props.group.id);
+        const commands = this.props.scmGroupCommandRegistry.getCommands(this.props.group.id);
         if (commands) {
             return <div className='git-change-list-buttons-container'>
                 {commands.map(command => this.renderGroupButton(command))}
