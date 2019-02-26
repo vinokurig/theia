@@ -761,11 +761,13 @@ export class GitViewContribution extends AbstractViewContribution<GitWidget>
     registerScmResourceCommands(registry: ScmResourceCommandRegistry): void {
         registry.registerCommands('Changes', [GIT_COMMANDS.OPEN_FILE.id, GIT_COMMANDS.DISCARD.id, GIT_COMMANDS.STAGE.id]);
         registry.registerCommands('Staged changes', [GIT_COMMANDS.OPEN_FILE.id, GIT_COMMANDS.UNSTAGE.id]);
+        registry.registerCommands('Merged Changes', [GIT_COMMANDS.OPEN_FILE.id, GIT_COMMANDS.DISCARD.id, GIT_COMMANDS.STAGE.id]);
     }
 
     registerScmGroupCommands(registry: ScmGroupCommandRegistry): void {
         registry.registerCommands('Changes', [GIT_COMMANDS.DISCARD_ALL.id, GIT_COMMANDS.STAGE_ALL.id]);
         registry.registerCommands('Staged changes', [GIT_COMMANDS.UNSTAGE_ALL.id]);
+        registry.registerCommands('Merged Changes', [GIT_COMMANDS.STAGE_ALL.id]);
     }
 
     protected async doSignOff() {
