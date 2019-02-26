@@ -96,7 +96,6 @@
 }
 
 .theia-mini-browser-content-area {
-    background-color: white;
     position: relative;
     display: flex;
     height: 100%;
@@ -113,7 +112,7 @@
 
 .theia-mini-browser-load-indicator {
     position: absolute;
-    top: 6px;
+    top: 0;
     right: 0;
     bottom: 0;
     left: 0;

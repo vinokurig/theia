@@ -153,8 +153,8 @@ export class QuickFileOpenService implements QuickOpenModel, QuickOpenHandler {
         const locations = [...this.navigationLocationService.locations()].reverse();
         for (const location of locations) {
             const uriString = location.uri.toString();
-            if (!alreadyCollected.has(uriString) && fuzzy.test(lookFor, uriString)) {
-                recentlyUsedItems.push(await this.toItem(location.uri, recentlyUsedItems.length === 0 ? 'recently opened' : undefined));
+            if (location.uri.scheme === 'file' && !alreadyCollected.has(uriString) && fuzzy.test(lookFor, uriString)) {
+                recentlyUsedItems.push(await this.toItem(location.uri, { groupLabel: recentlyUsedItems.length === 0 ? 'recently opened' : undefined, showBorder: false }));
                 alreadyCollected.add(uriString);
             }
         }
@@ -177,7 +177,7 @@ export class QuickFileOpenService implements QuickOpenModel, QuickOpenHandler {
                     const first = sortedResults[0];
                     sortedResults.shift();
                     if (first) {
-                        sortedResults.unshift(await this.toItem(first.getUri()!, 'file results'));
+                        sortedResults.unshift(await this.toItem(first.getUri()!, { groupLabel: 'file results', showBorder: true }));
                     }
 
                     // Return the recently used items, followed by the search results.
@@ -298,7 +298,7 @@ export class QuickFileOpenService implements QuickOpenModel, QuickOpenHandler {
             .catch(error => this.messageService.error(error));
     }
 
-    private async toItem(uriOrString: URI | string, group?: string) {
+    private async toItem(uriOrString: URI | string, group?: QuickOpenGroupItemOptions) {
         const uri = uriOrString instanceof URI ? uriOrString : new URI(uriOrString);
         let description = this.labelProvider.getLongName(uri.parent);
         if (this.workspaceService.workspace && !this.workspaceService.workspace.isDirectory) {
@@ -317,10 +317,7 @@ export class QuickFileOpenService implements QuickOpenModel, QuickOpenHandler {
             run: this.getRunFunction(uri)
         };
         if (group) {
-            return new QuickOpenGroupItem<QuickOpenGroupItemOptions>({
-                ...options,
-                groupLabel: group
-            });
+            return new QuickOpenGroupItem<QuickOpenGroupItemOptions>({ ...options, ...group });
         } else {
             return new QuickOpenItem<QuickOpenItemOptions>(options);
         }

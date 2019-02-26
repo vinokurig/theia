@@ -155,7 +155,7 @@ export interface PluginManagerExt {
 }
 
 export interface CommandRegistryMain {
-    $registerCommand(command: theia.Command): void;
+    $registerCommand(command: theia.CommandDescription): void;
     $unregisterCommand(id: string): void;
 
     $registerHandler(id: string): void;
@@ -912,7 +912,7 @@ export interface TaskDto {
     label: string;
     source?: string;
     // tslint:disable-next-line:no-any
-    properties?: { [key: string]: any };
+    [key: string]: any;
 }
 
 export interface TaskExecutionDto {
