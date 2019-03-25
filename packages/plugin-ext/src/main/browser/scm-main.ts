@@ -35,20 +35,23 @@ import { RPCProtocol } from '../../api/rpc-protocol';
 import { interfaces } from 'inversify';
 import { CancellationToken, DisposableCollection, Emitter, Event } from '@theia/core';
 import URI from '@theia/core/lib/common/uri';
+import { LabelProvider } from '@theia/core/lib/browser';
 
 export class ScmMainImpl implements ScmMain {
     private readonly proxy: ScmExt;
     private readonly scmService: ScmService;
     private readonly scmRepositoryMap: Map<number, ScmRepository>;
+    private readonly labelProvider: LabelProvider;
 
     constructor(rpc: RPCProtocol, container: interfaces.Container) {
         this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.SCM_EXT);
         this.scmService = container.get(ScmService);
         this.scmRepositoryMap = new Map();
+        this.labelProvider = container.get(LabelProvider);
     }
 
     async $registerSourceControl(sourceControlHandle: number, id: string, label: string, rootUri?: string): Promise<void> {
-        const provider: ScmProvider = new ScmProviderImpl(this.proxy, sourceControlHandle, id, label, rootUri);
+        const provider: ScmProvider = new ScmProviderImpl(this.proxy, sourceControlHandle, id, label, rootUri, this.labelProvider);
         const repository = this.scmService.registerScmProvider(provider);
         repository.input.onDidChange(message => {
             this.proxy.$updateInputBox(sourceControlHandle, message);
@@ -143,6 +146,7 @@ class ScmProviderImpl implements ScmProvider {
         private _contextValue: string,
         private _label: string,
         private _rootUri: string | undefined,
+        readonly labelProvider: LabelProvider
     ) {
         this.disposableCollection.push(this.onDidChangeEmitter);
         this.disposableCollection.push(this.onDidChangeResourcesEmitter);
@@ -260,15 +264,16 @@ class ScmProviderImpl implements ScmProvider {
         }
     }
 
-    updateGroupResourceStates(sourceControlHandle: number, groupHandle: number, resources: SourceControlResourceState[]): void {
+    async updateGroupResourceStates(sourceControlHandle: number, groupHandle: number, resources: SourceControlResourceState[]): Promise<void> {
         const group = this.groupsMap.get(groupHandle);
         if (group) {
-            (group as ResourceGroup).updateResources(resources.map(resource => {
+            (group as ResourceGroup).updateResources(await Promise.all(resources.map(async resource => {
                 let scmDecorations;
                 const decorations = resource.decorations;
                 if (decorations) {
+                    const icon = decorations.iconPath ? decorations.iconPath : await this.labelProvider.getIcon(new URI(resource.resourceUri));
                     scmDecorations = {
-                        icon: decorations.iconPath,
+                        icon,
                         tooltip: decorations.tooltip,
                         strikeThrough: decorations.strikeThrough,
                         faded: decorations.faded,
@@ -285,7 +290,7 @@ class ScmProviderImpl implements ScmProvider {
                     new URI(resource.resourceUri),
                     group,
                     scmDecorations);
-            }));
+            })));
         }
     }
 
