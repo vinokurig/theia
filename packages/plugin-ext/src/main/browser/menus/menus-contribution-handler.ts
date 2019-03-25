@@ -162,10 +162,10 @@ export class MenusContributionPointHandler {
         const condition = action.when;
         if (condition) {
             const group = condition.substring(condition.indexOf('scmResourceGroup == ') + 20);
-            if (action.group !== 'inline') {
-                this.menuRegistry.registerMenuAction(['scm-resource-context-menu_' + group], { commandId: id });
-            } else {
+            if (action.group === 'inline' || action.group === 'navigation') {
                 this.scmResourceCommandRegistry.registerCommand(group, id);
+            } else {
+                this.menuRegistry.registerMenuAction(['scm-resource-context-menu_' + group], { commandId: id });
             }
         }
 
