@@ -70,7 +70,7 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
         this.id = 'theia-scmContainer';
         this.title.label = 'Scm';
         this.title.caption = 'Scm';
-        this.title.iconClass = 'fa extensions-tab-icon';
+        this.title.iconClass = 'scm-tab-icon';
         this.addClass('theia-scm');
         this.scrollContainer = ScmWidget.Styles.GROUPS_CONTAINER;
 

@@ -137,7 +137,10 @@ export class MenusContributionPointHandler {
 
         const condition = action.when;
         if (condition) {
-            const group = condition.substring(condition.indexOf('scmResourceGroup == ') + 20);
+            let group = condition.substring(condition.indexOf('scmResourceGroup == ') + 20);
+            if (group.indexOf(' &&') > 0) {
+                group = group.substring(0, group.indexOf(' &&'));
+            }
             if (action.group !== 'inline') {
                 this.menuRegistry.registerMenuAction(['scm-group-context-menu_' + group], { commandId: id });
             } else {
@@ -161,8 +164,11 @@ export class MenusContributionPointHandler {
 
         const condition = action.when;
         if (condition) {
-            const group = condition.substring(condition.indexOf('scmResourceGroup == ') + 20);
-            if (action.group === 'inline' || action.group === 'navigation') {
+            let group = condition.substring(condition.indexOf('scmResourceGroup == ') + 20);
+            if (group.indexOf(' &&') > 0) {
+                group = group.substring(0, group.indexOf(' &&'));
+            }
+            if (action.group && action.group.startsWith('inline')) {
                 this.scmResourceCommandRegistry.registerCommand(group, id);
             } else {
                 this.menuRegistry.registerMenuAction(['scm-resource-context-menu_' + group], { commandId: id });

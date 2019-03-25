@@ -284,3 +284,8 @@
 .scm-change-list-buttons-container .toolbar-button:hover {
     background: var(--theia-content-font-color3);
 }
+
+.scm-tab-icon {
+    -webkit-mask: url('scm.svg');
+    mask: url('scm.svg');
+}
