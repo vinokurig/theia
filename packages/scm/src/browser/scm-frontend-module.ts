@@ -29,6 +29,10 @@ import {
 import { ScmResourceCommandContribution, ScmResourceCommandRegistry } from './scm-resource-command-registry';
 import { ScmQuickOpenService } from './scm-quick-open-service';
 import { ScmGroupCommandContribution, ScmGroupCommandRegistry} from './scm-group-command-registry';
+import { bindDirtyDiff } from './dirty-diff/dirty-diff-module';
+import { NavigatorTreeDecorator } from '@theia/navigator/lib/browser';
+import { NavigatorDecorator } from './decorations/navigator-decorator';
+import { ScmDecorationsService } from './decorations/scm-decorations-service';
 
 export default new ContainerModule(bind => {
     bind(ScmService).to(ScmServiceImpl).inSingletonScope();
@@ -57,4 +61,9 @@ export default new ContainerModule(bind => {
     bind(FrontendApplicationContribution).toService(ScmGroupCommandRegistry);
 
     bindContributionProvider(bind, ScmGroupCommandContribution);
+
+    bind(NavigatorTreeDecorator).to(NavigatorDecorator).inSingletonScope();
+    bind(ScmDecorationsService).toSelf().inSingletonScope();
+
+    bindDirtyDiff(bind);
 });

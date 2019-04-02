@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2019 Red Hat, Inc. and others.
+ * Copyright (C) 2018 TypeFox and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -14,19 +14,19 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable } from 'inversify';
-import { Emitter, Event } from '@theia/core';
-import { DecorationData } from '../../../api/plugin-api';
+import { inject, injectable } from 'inversify';
+import { FrontendApplicationContribution, FrontendApplication } from '@theia/core/lib/browser';
+import { DirtyDiffDecorator } from './dirty-diff-decorator';
 
 @injectable()
-export class DecoratorEmitter {
-    private readonly emitter = new Emitter<Map<string, DecorationData>>();
+export class DirtyDiffContribution implements FrontendApplicationContribution {
 
-    onEvent(): Event<Map<string, DecorationData>> {
-        return this.emitter.event;
+    constructor(
+        @inject(DirtyDiffDecorator) protected readonly dirtyDiffDecorator: DirtyDiffDecorator,
+    ) { }
+
+    onStart(app: FrontendApplication): void {
+        // this.dirtyDiffManager.onDirtyDiffUpdate(update => this.dirtyDiffDecorator.applyDecorations(update));
     }
 
-    fireEvent(data: Map<string, DecorationData>): void {
-        this.emitter.fire(data);
-    }
 }

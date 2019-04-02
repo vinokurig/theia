@@ -36,7 +36,7 @@ import { interfaces } from 'inversify';
 import { CancellationToken, DisposableCollection, Emitter, Event } from '@theia/core';
 import URI from '@theia/core/lib/common/uri';
 import { LabelProvider } from '@theia/core/lib/browser';
-import { Decorator } from './decorations/decorator';
+import { NavigatorDecorator } from '@theia/scm/lib/browser/decorations/navigator-decorator';
 
 export class ScmMainImpl implements ScmMain {
     private readonly proxy: ScmExt;
@@ -279,7 +279,7 @@ class ScmProviderImpl implements ScmProvider {
                         strikeThrough: decorations.strikeThrough,
                         faded: decorations.faded,
                         letter: resource.letter,
-                        color: Decorator.getDecorationColor(resource.colorId)
+                        color: NavigatorDecorator.getDecorationColor(resource.colorId)
                     };
                 }
                 return new ScmResourceImpl(

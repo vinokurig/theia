@@ -21,21 +21,20 @@ import { Tree } from '@theia/core/lib/browser/tree/tree';
 import { TreeDecorator, TreeDecoration } from '@theia/core/lib/browser/tree/tree-decorator';
 import { DepthFirstTreeIterator } from '@theia/core/lib/browser';
 import { FileStatNode } from '@theia/filesystem/lib/browser';
-import { DecoratorEmitter } from './decorator-emitter';
-import { DecorationData } from '../../../api/plugin-api';
+import { ScmDecorationsService } from './scm-decorations-service';
 import URI from '@theia/core/lib/common/uri';
+import { DecorationData } from '@theia/plugin-ext';
 
 @injectable()
-export class Decorator implements TreeDecorator {
+export class NavigatorDecorator implements TreeDecorator {
 
     readonly id = 'theia-scm-decorator';
     private decorationsMap: Map<string, DecorationData> | undefined;
 
     @inject(ILogger) protected readonly logger: ILogger;
 
-    constructor(@inject(DecoratorEmitter) protected readonly decorationsEmitter: DecoratorEmitter) {
-        const event = this.decorationsEmitter.onEvent();
-        event(data => {
+    constructor(@inject(ScmDecorationsService) protected readonly decorationsService: ScmDecorationsService) {
+        this.decorationsService.onNavigatorDecorationsChanged(data => {
             this.decorationsMap = data;
             this.fireDidChangeDecorations((tree: Tree) => this.collectDecorators(tree));
         });
@@ -65,7 +64,7 @@ export class Decorator implements TreeDecorator {
                 {
                     data: change.letter ? change.letter : '',
                     fontData: {
-                        color: change.color ? Decorator.getDecorationColor(change.color.id) : '',
+                        color: change.color ? NavigatorDecorator.getDecorationColor(change.color.id) : '',
                     },
                     tooltip: change.title ? change.title : ''
                 }

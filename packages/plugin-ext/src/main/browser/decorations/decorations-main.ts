@@ -24,19 +24,19 @@ import {
 import { interfaces } from 'inversify';
 import { Emitter } from '@theia/core';
 import { Tree, TreeDecoration } from '@theia/core/lib/browser';
-import { DecoratorEmitter } from './decorator-emitter';
 import { RPCProtocol } from '../../../api/rpc-protocol';
+import { ScmDecorationsService } from '@theia/scm/lib/browser/decorations/scm-decorations-service';
 
 export class DecorationsMainImpl implements DecorationsMain {
 
     private readonly proxy: DecorationsExt;
-    private readonly decorationsEmitter: DecoratorEmitter;
+    private readonly scmDecorationsService: ScmDecorationsService;
 
     protected readonly emitter = new Emitter<(tree: Tree) => Map<string, TreeDecoration.Data>>();
 
     constructor(rpc: RPCProtocol, container: interfaces.Container) {
         this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.DECORATIONS_EXT);
-        this.decorationsEmitter = container.get(DecoratorEmitter);
+        this.scmDecorationsService = container.get(ScmDecorationsService);
     }
 
     readonly providersMap: Map<number, DecorationProvider> = new Map();
@@ -59,7 +59,7 @@ export class DecorationsMainImpl implements DecorationsMain {
                     result.set(uri, data);
                 }
             }
-            this.decorationsEmitter.fireEvent(result);
+            this.scmDecorationsService.fireNavigatorDecorationsChanged(result);
         } else if (arg) {
             this.proxy.$provideDecoration(id, arg);
         }
