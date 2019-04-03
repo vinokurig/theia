@@ -157,7 +157,7 @@ export class TaskService implements TaskConfigurationClient {
      * Returns a task configuration provided by an extension by task source and label.
      * If there are no task configuration, returns undefined.
      */
-    getProvidedTask(source: string, label: string): TaskConfiguration | undefined {
+    async getProvidedTask(source: string, label: string): Promise<TaskConfiguration | undefined> {
         return this.providedTaskConfigurations.getTask(source, label);
     }
 
@@ -190,7 +190,8 @@ export class TaskService implements TaskConfigurationClient {
             this.logger.error(`Can't get task launch configuration for label: ${taskLabel}`);
             return;
         }
-        this.run(task._source, task.label);
+
+        this.runTask(task);
     }
 
     /**
@@ -209,7 +210,7 @@ export class TaskService implements TaskConfigurationClient {
      * It looks for configured and provided tasks.
      */
     async run(source: string, taskLabel: string): Promise<void> {
-        let task = this.getProvidedTask(source, taskLabel);
+        let task = await this.getProvidedTask(source, taskLabel);
         if (!task) {
             task = this.taskConfigurations.getTask(source, taskLabel);
             if (!task) {
@@ -217,6 +218,13 @@ export class TaskService implements TaskConfigurationClient {
                 return;
             }
         }
+
+        this.runTask(task);
+    }
+
+    async runTask(task: TaskConfiguration): Promise<void> {
+        const source = task._source;
+        const taskLabel = task.label;
 
         const resolver = this.taskResolverRegistry.getResolver(task.type);
         let resolvedTask: TaskConfiguration;
@@ -286,6 +294,10 @@ export class TaskService implements TaskConfigurationClient {
         this.shell.addWidget(widget, { area: 'bottom' });
         this.shell.activateWidget(widget.id);
         widget.start(terminalId);
+    }
+
+    async configure(task: TaskConfiguration): Promise<void> {
+        await this.taskConfigurations.configure(task);
     }
 
     protected isEventForThisClient(context: string | undefined): boolean {
