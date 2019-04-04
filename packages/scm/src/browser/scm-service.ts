@@ -33,6 +33,7 @@ export interface ScmService extends Disposable {
 export interface ScmProvider extends Disposable {
     readonly label: string;
     readonly id: string;
+    readonly handle: number;
     readonly contextValue: string;
 
     readonly groups: ScmResourceGroup[];

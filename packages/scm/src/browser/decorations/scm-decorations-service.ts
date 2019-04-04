@@ -52,22 +52,31 @@ export class ScmDecorationsService {
                 }
             }
         }));
+        this.scmService.onDidChangeSelectedRepositories(() => {
+            const editor = this.editorService.getActiveEditor();
+            if (editor) {
+                this.applyEditorDecorations(editor.editor);
+            }
+        });
     }
 
     async applyEditorDecorations(editor: TextEditor) {
         const currentRepo = this.scmService.selectedRepository;
         if (currentRepo) {
-            const uri = editor.uri.withScheme(currentRepo.provider.contextValue).withQuery(`{"ref":"", "path":"${editor.uri.path.toString()}"}`);
-            const previousResource = await this.contentResourceResolver.resolve(uri);
-            const previousContent = await previousResource.readContents();
-            const previousLines = ContentLines.fromString(previousContent);
-            const currentResource = await this.resourceProvider(editor.uri);
-            const currentContent = await currentResource.readContents();
-            const currentLines = ContentLines.fromString(currentContent);
-            const { added, removed, modified } = this.diffComputer.computeDirtyDiff(ContentLines.arrayLike(previousLines), ContentLines.arrayLike(currentLines));
-            this.decorator.applyDecorations({ editor: editor, added, removed, modified });
-            currentResource.dispose();
-            previousResource.dispose();
+            try {
+                const uri = editor.uri.withScheme(currentRepo.provider.contextValue).withQuery(`{"ref":"", "path":"${editor.uri.path.toString()}"}`);
+                const previousResource = await this.contentResourceResolver.resolve(uri);
+                const previousContent = await previousResource.readContents();
+                const previousLines = ContentLines.fromString(previousContent);
+                const currentResource = await this.resourceProvider(editor.uri);
+                const currentContent = await currentResource.readContents();
+                const currentLines = ContentLines.fromString(currentContent);
+                const { added, removed, modified } = this.diffComputer.computeDirtyDiff(ContentLines.arrayLike(previousLines), ContentLines.arrayLike(currentLines));
+                this.decorator.applyDecorations({ editor: editor, added, removed, modified });
+                currentResource.dispose();
+                previousResource.dispose();
+            } catch (e) {
+            }
         }
     }
 

@@ -213,7 +213,21 @@ class ScmProviderImpl implements ScmProvider {
     }
 
     updateSourceControl(features: SourceControlProviderFeatures): void {
-        this.features = features;
+        if (features.acceptInputCommand) {
+            this.features.acceptInputCommand = features.acceptInputCommand;
+        }
+        if (features.commitTemplate) {
+            this.features.commitTemplate = features.commitTemplate;
+        }
+        if (features.count) {
+            this.features.count = features.count;
+        }
+        if (features.hasQuickDiffProvider !== undefined) {
+            this.features.hasQuickDiffProvider = features.hasQuickDiffProvider;
+        }
+        if (features.statusBarCommands) {
+            this.features.statusBarCommands = features.statusBarCommands;
+        }
         this.onDidChangeEmitter.fire(undefined);
 
         if (features.commitTemplate) {

@@ -580,19 +580,21 @@ export class GitContribution implements
                 return this.quickOpenService.clone(url, folder, branch);
             }
         });
-        const commit = (scmRepository: ScmRepository, message: string) => {
-            const localUri = scmRepository.provider.rootUri;
-            if (localUri) {
-                this.gitCommands.doCommit({ localUri }, undefined, message);
+        const commit = () => {
+            const scmRepository = this.scmService.selectedRepository;
+            if (scmRepository) {
+                const localUri = scmRepository.provider.rootUri;
+                const message = scmRepository.input.value;
+                if (localUri) {
+                    this.gitCommands.doCommit({ localUri }, undefined, message);
+                }
             }
         };
         registry.registerCommand(GIT_COMMANDS.COMMIT,
             {
                 // tslint:disable-next-line:no-any
-                execute(...args): any {
-                    if (args.length > 1) {
-                        commit(args[0], args[1]);
-                    }
+                execute(): any {
+                    commit();
                 }
             });
         const refresh = () => {
@@ -855,6 +857,7 @@ export class ScmProviderImpl implements ScmProvider {
     private disposableCollection: DisposableCollection = new DisposableCollection();
     private _groups: ScmResourceGroup[];
     private _count: number | undefined;
+    readonly handle = 0;
 
     constructor(
         private _contextValue: string,

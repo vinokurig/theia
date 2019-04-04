@@ -25,12 +25,13 @@ import {
     ScmResourceGroup,
     ScmService
 } from './scm-service';
-import { CommandRegistry, MenuPath } from '@theia/core';
+import { CommandRegistry, format, MenuPath } from '@theia/core';
 import { EditorManager } from '@theia/editor/lib/browser';
 import { ScmTitleCommandRegistry, ScmTitleItem } from './scm-title-command-registry';
 import { ScmResourceCommandRegistry } from './scm-resource-command-registry';
 import { ScmGroupCommandRegistry } from './scm-group-command-registry';
 import { ScmNavigableListWidget } from './scm-navigable-list-widget';
+import { KeyboardEvent } from 'react';
 
 @injectable()
 export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements StatefulWidget {
@@ -131,7 +132,7 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
         this.inputCommandMessageValidator = input.validateInput;
         return <div className={ScmWidget.Styles.MAIN_CONTAINER}>
             <div className='headerContainer'>
-                {this.renderInput(input)}
+                {this.renderInput(input, repository)}
                 {this.renderCommandBar(repository)}
             </div>
             <ScmResourceGroupsContainer
@@ -148,9 +149,19 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
         </div>;
     }
 
-    protected renderInput(input: ScmInput): React.ReactNode {
+    protected renderInput(input: ScmInput, repository: ScmRepository): React.ReactNode {
         const validationStatus = this.inputCommandMessageValidationResult ? this.inputCommandMessageValidationResult.type : 'idle';
         const validationMessage = this.inputCommandMessageValidationResult ? this.inputCommandMessageValidationResult.message : '';
+        const keyBinding = navigator.appVersion.indexOf('Mac') !== -1 ? 'Cmd+Enter' : 'Ctrl+Enter';
+        const message = format(input.placeholder, keyBinding);
+        const handleHotKey = (event: KeyboardEvent) => {
+            if (event.key === 'Enter' && event.ctrlKey) {
+                const command = repository.provider.acceptInputCommand;
+                if (command) {
+                    this.executeInputCommand(command.id, repository.provider.handle);
+                }
+            }
+        };
         return <div className={ScmWidget.Styles.INPUT_MESSAGE_CONTAINER}>
             <textarea
                 className={`${ScmWidget.Styles.INPUT_MESSAGE} theia-scm-input-message-${validationStatus}`}
@@ -160,9 +171,10 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
                 }}
                 autoFocus={true}
                 onInput={this.onInputMessageChange.bind(this)}
-                placeholder={`${input.placeholder}`}
+                placeholder={`${message}`}
                 id={ScmWidget.Styles.INPUT_MESSAGE}
                 defaultValue={`${input.value}`}
+                onKeyPress={handleHotKey}
                 tabIndex={1}>
             </textarea>
             <div
@@ -254,7 +266,7 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
             return <div className='buttons'>
                 <button className='theia-button'
                         onClick={() => {
-                            this.executeInputCommand(command.id, repository);
+                            this.executeInputCommand(command.id, repository.provider.handle);
                         }} title={`${command.tooltip}`}>
                     {`${repository.provider.acceptInputCommand.text}`}
                 </button>
@@ -262,7 +274,7 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
         }
     }
 
-    private executeInputCommand(commandId: string, repository: ScmRepository): void {
+    private executeInputCommand(commandId: string, providerId: number): void {
         this.inputCommandMessageValidationResult = undefined;
         if (this.message.trim().length === 0) {
             this.inputCommandMessageValidationResult = {
@@ -271,7 +283,7 @@ export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements St
             };
         }
         if (this.inputCommandMessageValidationResult === undefined) {
-            this.commandRegistry.executeCommand(commandId, repository, this.message);
+            this.commandRegistry.executeCommand(commandId, providerId);
             this.resetInputMessages();
             this.update();
         } else {
