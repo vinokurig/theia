@@ -360,6 +360,9 @@ export function createAPIFactory(
             },
             registerDecorationProvider(provider: DecorationProvider): theia.Disposable {
                 return decorationsExt.registerDecorationProvider(provider);
+            },
+            registerUriHandler(handler: theia.UriHandler): theia.Disposable {
+                return new Disposable(() => {});
             }
         };
 

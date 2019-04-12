@@ -19,6 +19,7 @@ import { CommandRegistryExt, Plugin as InternalPlugin, PLUGIN_RPC_CONTEXT, ScmEx
 import { RPCProtocol } from '../api/rpc-protocol';
 import { CancellationToken } from '@theia/core';
 import { UriComponents } from '../common/uri-components';
+import { Emitter } from '@theia/core/lib/common/event';
 import URI from '@theia/core/lib/common/uri';
 
 export class ScmExtImpl implements ScmExt {
@@ -136,6 +137,8 @@ class InputBoxImpl implements theia.SourceControlInputBox {
 }
 
 class SourceControlImpl implements theia.SourceControl {
+    selected: boolean;
+    onDidChangeSelection: theia.Event<boolean> = new Emitter<boolean>().event;
     private static handle: number = 0;
     private static resourceGroupHandle: number = 0;
     private handle = SourceControlImpl.handle ++;
