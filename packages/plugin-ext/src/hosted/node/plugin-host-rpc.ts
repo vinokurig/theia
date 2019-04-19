@@ -80,7 +80,9 @@ export class PluginHostRPC {
      * note: stopPlugin can also be invoked through RPC proxy.
      */
     stopContext(): PromiseLike<void> {
-        return this.pluginManager.$stopPlugin('');
+        const promise = this.pluginManager.$stopPlugin('');
+        promise.then(() => delete this.apiFactory);
+        return promise;
     }
 
     // tslint:disable-next-line:no-any
@@ -92,11 +94,32 @@ export class PluginHostRPC {
                 console.log('PLUGIN_HOST(' + process.pid + '): PluginManagerExtImpl/loadPlugin(' + plugin.pluginPath + ')');
                 try {
                     // cleaning the cache for all files of that plug-in.
-                    Object.keys(require.cache).forEach(key => {
+                    Object.keys(require.cache).forEach(function (key) {
+                        const mod = require.cache[key];
+
+                        // remove children that are extensions
+                        let i = mod.children.length;
+                        while (i--) {
+                            const childMod: NodeJS.Module = mod.children[i];
+                            if (childMod && childMod.id.startsWith(plugin.pluginFolder)) {
+                                // cleanup exports
+                                childMod.exports = {};
+                                mod.children.splice(i, 1);
+                                for (let j = 0; j < childMod.children.length; j++) {
+                                    delete childMod.children[j];
+                                }
+                            }
+                        }
+
                         if (key.startsWith(plugin.pluginFolder)) {
                             // delete entry
                             delete require.cache[key];
+                            const ix = mod.parent.children.indexOf(mod);
+                            if (ix >= 0) {
+                                mod.parent.children.splice(ix, 1);
+                            }
                         }
+
                     });
                     return require(plugin.pluginPath);
                 } catch (e) {
@@ -110,8 +133,16 @@ export class PluginHostRPC {
                 for (const plg of raw) {
                     const pluginModel = plg.model;
                     const pluginLifecycle = plg.lifecycle;
-                    if (pluginModel.entryPoint!.backend) {
 
+                    if (pluginModel.entryPoint!.frontend) {
+                        foreign.push({
+                            pluginPath: pluginModel.entryPoint.frontend!,
+                            pluginFolder: plg.source.packagePath,
+                            model: pluginModel,
+                            lifecycle: pluginLifecycle,
+                            rawModel: plg.source
+                        });
+                    } else {
                         let backendInitPath = pluginLifecycle.backendInitPath;
                         // if no init path, try to init as regular Theia plugin
                         if (!backendInitPath) {
@@ -129,14 +160,6 @@ export class PluginHostRPC {
                         self.initContext(backendInitPath, plugin);
 
                         result.push(plugin);
-                    } else {
-                        foreign.push({
-                            pluginPath: pluginModel.entryPoint.frontend!,
-                            pluginFolder: plg.source.packagePath,
-                            model: pluginModel,
-                            lifecycle: pluginLifecycle,
-                            rawModel: plg.source
-                        });
                     }
                 }
                 return [result, foreign];

@@ -85,6 +85,12 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
                 dispose(pluginContext.subscriptions);
             }
         });
+
+        // clean map
+        this.activatedPlugins.clear();
+        this.pluginActivationPromises.clear();
+        this.pluginContextsMap.clear();
+
         return Promise.resolve();
     }
 
@@ -117,6 +123,9 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
 
         // run plugins
         for (const plugin of plugins) {
+            if (!plugin.pluginPath) {
+                continue;
+            }
             const pluginMain = this.host.loadPlugin(plugin);
             // able to load the plug-in ?
             if (pluginMain !== undefined) {
