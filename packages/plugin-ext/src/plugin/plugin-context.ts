@@ -465,7 +465,14 @@ export function createAPIFactory(
             }
         };
 
-        const env: typeof theia.env = {
+        const env: typeof theia.env = Object.freeze({
+            get appName() { return envExt.appName; },
+            get appRoot() { return envExt.appRoot; },
+            get language() { return envExt.language; },
+            get machineId() { return envExt.machineId; },
+            get sessionId() { return envExt.sessionId; },
+            get uriScheme() { return envExt.uriScheme; },
+
             getEnvVariable(envVarName: string): PromiseLike<string | undefined> {
                 return envExt.getEnvVariable(envVarName);
             },
@@ -479,7 +486,7 @@ export function createAPIFactory(
                 return envExt.getClientOperatingSystem();
             }
 
-        };
+        });
 
         const languageServer: typeof theia.languageServer = {
             registerLanguageServerProvider(languageServerInfo: theia.LanguageServerInfo): Disposable {
