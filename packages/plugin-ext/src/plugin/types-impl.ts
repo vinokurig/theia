@@ -1226,6 +1226,21 @@ export enum FileChangeType {
     Deleted = 3,
 }
 
+/**
+ * Collapsible state of a [comment thread](#CommentThread)
+ */
+export enum CommentThreadCollapsibleState {
+    /**
+     * Determines an item is collapsed
+     */
+    Collapsed = 0,
+
+    /**
+     * Determines an item is expanded
+     */
+    Expanded = 1
+}
+
 export class FileSystemError extends Error {
 
     static FileExists(messageOrUri?: string | URI): FileSystemError {
