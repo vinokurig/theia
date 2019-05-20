@@ -137,7 +137,7 @@ export class RPCProtocolImpl implements RPCProtocol {
             return;
         }
 
-        const msg = <RPCMessage>JSON.parse(rawmsg, ObjectsTransferrer.reviver);
+        const msg = <RPCMessage>JSONRetrocycle(JSON.parse(rawmsg, ObjectsTransferrer.reviver));
 
         // handle message that sets the Host ID
         if ((<any>msg).setHostID) {
@@ -318,7 +318,8 @@ class MessageFactory {
         if (messageToSendHostId) {
             prefix = `"hostID":"${messageToSendHostId}",`;
         }
-        return `{${prefix}"type":${MessageType.Request},"id":"${req}","proxyId":"${rpcId}","method":"${method}","args":${JSON.stringify(args, ObjectsTransferrer.replacer)}}`;
+        return `{${prefix}"type":${MessageType.Request},"id":"${req}","proxyId":"${rpcId}","method":"${method}",
+                 "args":${JSON.stringify(JSONDecycle(args, '[\"args\"]'), ObjectsTransferrer.replacer)}}`;
     }
 
     public static replyOK(req: string, res: any, messageToSendHostId?: string): string {
@@ -329,7 +330,8 @@ class MessageFactory {
         if (typeof res === 'undefined') {
             return `{${prefix}"type":${MessageType.Reply},"id":"${req}"}`;
         }
-        return `{${prefix}"type":${MessageType.Reply},"id":"${req}","res":${JSON.stringify(res, ObjectsTransferrer.replacer)}}`;
+        return `{${prefix}"type":${MessageType.Reply},"id":"${req}",
+                 "res":${JSON.stringify(JSONDecycle(res, '[\"res\"]'), ObjectsTransferrer.replacer)}}`;
     }
 
     public static replyErr(req: string, err: any, messageToSendHostId?: string): string {
@@ -483,4 +485,161 @@ export function transformErrorForSerialization(error: Error): SerializedError {
 
     // return as is
     return error;
+}
+
+// Make a deep copy of an object or array, assuring that there is at most
+// one instance of each object or array in the resulting structure. The
+// duplicate references (which might be forming cycles) are replaced with
+// an object of the form
+
+//      {"$ref": PATH}
+
+// where the PATH is a JSONPath string that locates the first occurance.
+
+// So,
+
+//      var a = [];
+//      a[0] = a;
+//      return JSON.stringify(JSON.decycle(a));
+
+// produces the string '[{"$ref":"$"}]'.
+
+// If a replacer function is provided, then it will be called for each value.
+// A replacer function receives a value and returns a replacement value.
+
+// JSONPath is used to locate the unique object. $ indicates the top level of
+// the object or array. [NUMBER] or [STRING] indicates a child element or
+// property.
+
+export function JSONDecycle(object: any, baseJsonPath: string, replacer?: any): any {
+
+    const objects = new WeakMap();     // object to path mappings
+    return (function derez(value, path) {
+        // The derez function recurses through the object, producing the deep copy.
+        let old_path;   // The path of an earlier occurance of value
+        let nu: any;         // The new object or array
+        // If a replacer function was provided, then call it to get a replacement value.
+        if (replacer !== undefined) {
+            value = replacer(value);
+        }
+        // typeof null === "object", so go on if this value is really an object but not
+        // one of the weird builtin objects.
+        if (
+            typeof value === 'object'
+            && value !== null
+            && !(value instanceof Boolean)
+            && !(value instanceof Date)
+            && !(value instanceof Number)
+            && !(value instanceof RegExp)
+            && !(value instanceof String)
+        ) {
+            // If the value is an object or array, look to see if we have already
+            // encountered it. If so, return a {"$ref":PATH} object. This uses an
+            // ES6 WeakMap.
+            old_path = objects.get(value);
+            if (old_path !== undefined) {
+                if (old_path === '$[0][\"metadata\"]') {
+                    // debug
+                    old_path = objects.get(value);
+                }
+                return { $ref: old_path };
+            }
+            // Otherwise, accumulate the unique value and its path.
+
+            objects.set(value, path);
+
+            // If it is an array, replicate the array.
+
+            if (Array.isArray(value)) {
+                nu = [];
+                value.forEach(function (element, i) {
+                    nu[i] = derez(element, path + '[' + i + ']');
+                });
+            } else {
+
+                // If it is an object, replicate the object.
+
+                nu = {};
+                Object.keys(value).forEach(function (name) {
+                    nu[name] = derez(
+                        value[name],
+                        path + '[' + JSON.stringify(name) + ']'
+                    );
+                });
+            }
+            return nu;
+        }
+        return value;
+    }(object, '$' + (baseJsonPath ? baseJsonPath : '')));
+
+}
+
+// Restore an object that was reduced by decycle. Members whose values are
+// objects of the form
+//      {$ref: PATH}
+// are replaced with references to the value found by the PATH. This will
+// restore cycles. The object will be mutated.
+
+// The eval function is used to locate the values described by a PATH. The
+// root object is kept in a $ variable. A regular expression is used to
+// assure that the PATH is extremely well formed. The regexp contains nested
+// * quantifiers. That has been known to have extremely bad performance
+// problems on some browsers for very long strings. A PATH is expected to be
+// reasonably short. A PATH is allowed to belong to a very restricted subset of
+// Goessner's JSONPath.
+
+// So,
+//      var s = '[{"$ref":"$"}]';
+//      return JSON.retrocycle(JSON.parse(s));
+// produces an array containing a single element which is the array itself.
+
+export function JSONRetrocycle($: any): any {
+    const px = /^\$(?:\[(?:\d+|"(?:[^\\"\u0000-\u001f]|\\(?:[\\"\/bfnrt]|u[0-9a-zA-Z]{4}))*")\])*$/;
+
+    function rez(value: any): void {
+
+        // The rez function walks recursively through the object looking for $ref
+        // properties. When it finds one that has a value that is a path, then it
+        // replaces the $ref object with a reference to the value that is found by
+        // the path.
+
+        if (value && typeof value === 'object') {
+            if (Array.isArray(value)) {
+                value.forEach(function (element, i) {
+                    if (typeof element === 'object' && element !== null) {
+                        const path = element.$ref;
+                        if (typeof path === 'string' && px.test(path)) {
+                            try {
+                                value[i] = eval(path);
+                            } catch (e) {
+                                value[i] = path;
+                            }
+                        } else {
+                            rez(element);
+                        }
+                    }
+
+                });
+            } else {
+                Object.keys(value).forEach(function (name) {
+                    const item = value[name];
+                    if (typeof item === 'object' && item !== null) {
+                        const path = item.$ref;
+                        if (typeof path === 'string' && px.test(path)) {
+                            try {
+                                value[name] = eval(path);
+                            } catch (e) {
+                                value[name] = path;
+                            }
+                        } else {
+                            rez(item);
+                        }
+                    }
+
+                });
+            }
+        }
+    }
+    rez($);
+    return $;
 }
