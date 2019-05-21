@@ -538,10 +538,6 @@ export function JSONDecycle(object: any, baseJsonPath: string, replacer?: any): 
             // ES6 WeakMap.
             old_path = objects.get(value);
             if (old_path !== undefined) {
-                if (old_path === '$[0][\"metadata\"]') {
-                    // debug
-                    old_path = objects.get(value);
-                }
                 return { $ref: old_path };
             }
             // Otherwise, accumulate the unique value and its path.
