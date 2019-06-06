@@ -104,7 +104,9 @@ import {
     ColorPresentation,
     OperatingSystem,
     WebviewPanelTargetArea,
-    FileSystemError
+    FileSystemError,
+    CommentThreadCollapsibleState,
+    QuickInputButtons
 } from './types-impl';
 import { SymbolKind } from '../api/model';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
@@ -211,7 +213,7 @@ export function createAPIFactory(
             },
             registerDiffInformationCommand(command: string, callback: (diff: LineChange[], ...args: any[]) => any, thisArg?: any): Disposable {
                 // Dummy implementation.
-                return new Disposable(() => {});
+                return new Disposable(() => { });
             }
         };
 
@@ -368,7 +370,10 @@ export function createAPIFactory(
                 return decorationsExt.registerDecorationProvider(provider);
             },
             registerUriHandler(handler: theia.UriHandler): theia.Disposable {
-                return new Disposable(() => {});
+                return new Disposable(() => { });
+            },
+            createInputBox(): theia.InputBox {
+                return quickOpenExt.createInputBox();
             }
         };
 
@@ -684,9 +689,31 @@ export function createAPIFactory(
             }
         };
 
+        const comment: typeof theia.comment = {
+            createCommentController(id: string, label: string): theia.CommentController {
+                return {
+                    id, label, inputBox: undefined,
+                    createCommentThread(commentId: string, resource: Uri, range: Range, comments: Comment[]): theia.CommentThread {
+                        return {
+                            id: commentId,
+                            resource,
+                            range,
+                            comments,
+                            collapsibleState: 0,
+                            dispose(): void {
+                            }
+                        };
+                    },
+                    dispose(): void {
+                    }
+                };
+            }
+        };
+
         return <typeof theia>{
             version: require('../../package.json').version,
             commands,
+            comment,
             window,
             workspace,
             env,
@@ -771,7 +798,9 @@ export function createAPIFactory(
             FoldingRangeKind,
             OperatingSystem,
             WebviewPanelTargetArea,
-            FileSystemError
+            FileSystemError,
+            CommentThreadCollapsibleState,
+            QuickInputButtons
         };
     };
 }

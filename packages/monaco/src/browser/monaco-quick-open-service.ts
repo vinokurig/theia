@@ -24,8 +24,10 @@ import {
 import { KEY_CODE_MAP } from './monaco-keycode-map';
 import { ContextKey } from '@theia/core/lib/browser/context-key-service';
 import { MonacoContextKeyService } from './monaco-context-key-service';
+import { ThemeService } from '@theia/core/lib/browser/theming';
 
 export interface MonacoQuickOpenControllerOpts extends monaco.quickOpen.IQuickOpenControllerOpts {
+    enabled?: boolean;
     readonly prefix?: string;
     readonly password?: boolean;
     readonly ignoreFocusOut?: boolean;
@@ -40,12 +42,16 @@ export class MonacoQuickOpenService extends QuickOpenService {
     protected _widget: monaco.quickOpen.QuickOpenWidget | undefined;
     protected opts: MonacoQuickOpenControllerOpts | undefined;
     protected previousActiveElement: Element | undefined;
+    protected _widgetNode: HTMLElement;
 
     @inject(MonacoContextKeyService)
     protected readonly contextKeyService: MonacoContextKeyService;
 
     @inject(KeybindingRegistry)
     protected readonly keybindingRegistry: KeybindingRegistry;
+
+    @inject(ThemeService)
+    protected readonly themeService: ThemeService;
 
     protected inQuickOpenKey: ContextKey<boolean>;
 
@@ -59,6 +65,7 @@ export class MonacoQuickOpenService extends QuickOpenService {
         container.style.position = 'absolute';
         container.style.top = '0px';
         container.style.right = '50%';
+        container.style.zIndex = '1000000';
         overlayWidgets.appendChild(container);
     }
 
@@ -91,11 +98,26 @@ export class MonacoQuickOpenService extends QuickOpenService {
             this.previousActiveElement = activeContext;
             this.contextKeyService.activeContext = activeContext instanceof HTMLElement ? activeContext : undefined;
         }
+
         this.hideDecoration();
         this.widget.show(this.opts.prefix || '');
         this.setPlaceHolder(opts.inputAriaLabel);
         this.setPassword(opts.password ? true : false);
+        this.setEnabled(opts.enabled);
         this.inQuickOpenKey.set(true);
+    }
+
+    setEnabled(isEnabled: boolean | undefined) {
+        const widget = this.widget;
+        if (widget.inputBox) {
+            widget.inputBox.inputElement.readOnly = (isEnabled !== undefined) ? !isEnabled : false;
+        }
+    }
+
+    setValue(value: string | undefined) {
+        if (this.widget && this.widget.inputBox) {
+            this.widget.inputBox.inputElement.value = (value !== undefined) ? value : '';
+        }
     }
 
     setPlaceHolder(placeHolder: string): void {
@@ -147,11 +169,25 @@ export class MonacoQuickOpenService extends QuickOpenService {
                 this.onClose(true);
             },
             onType: lookFor => this.onType(lookFor || ''),
-            onFocusLost: () => (this.opts && this.opts.ignoreFocusOut !== undefined) ? this.opts.ignoreFocusOut : false
+            onFocusLost: () => {
+                if (this.opts && this.opts.ignoreFocusOut !== undefined) {
+                    if (this.opts.ignoreFocusOut === false) {
+                        this.onClose(true);
+                    }
+                    return this.opts.ignoreFocusOut;
+                } else {
+                    return false;
+                }
+            }
         }, {});
         this.attachQuickOpenStyler();
-        this._widget.create();
+        const newWidget = this._widget.create();
+        this._widgetNode = newWidget;
         return this._widget;
+    }
+
+    get widgetNode(): HTMLElement {
+        return this._widgetNode;
     }
 
     protected attachQuickOpenStyler(): void {
@@ -202,6 +238,14 @@ export class MonacoQuickOpenControllerOptsImpl implements MonacoQuickOpenControl
         this.model = model;
         this.options = QuickOpenOptions.resolve(options);
         this.password = this.options.password;
+    }
+
+    get busy(): boolean {
+        return this.options.busy;
+    }
+
+    get enabled(): boolean {
+        return this.options.enabled;
     }
 
     get prefix(): string {

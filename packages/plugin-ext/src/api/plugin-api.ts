@@ -27,7 +27,8 @@ import {
     EndOfLine,
     OverviewRulerLane,
     IndentAction,
-    FileOperationOptions
+    FileOperationOptions,
+    QuickInputButton
 } from '../plugin/types-impl';
 import { UriComponents } from '../common/uri-components';
 import { ConfigurationTarget } from '../plugin/types-impl';
@@ -72,6 +73,8 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { SymbolInformation } from 'vscode-languageserver-types';
 import { ScmCommand } from '@theia/scm/lib/browser';
 import { ArgumentProcessor } from '../plugin/command-registry';
+import { TitleButton } from '@theia/core/lib/browser/quick-open/quick-open-service';
+import { MaybePromise } from '@theia/core/lib/common/types';
 
 export interface PluginInitData {
     plugins: PluginMetadata[];
@@ -293,6 +296,9 @@ export interface StatusBarMessageRegistryMain {
 export interface QuickOpenExt {
     $onItemSelected(handle: number): void;
     $validateInput(input: string): PromiseLike<string | undefined> | undefined;
+    $acceptInput(): Promise<void>;
+    $acceptHide(): Promise<void>;
+    $acceptButton(btn: QuickInputButton): Promise<void>;
 }
 
 /**
@@ -379,11 +385,42 @@ export interface WorkspaceFolderPickOptionsMain {
     ignoreFocusOut?: boolean;
 }
 
+export interface ITransferInputBox {
+    title: string | undefined;
+    step: number | undefined;
+    totalSteps: number | undefined;
+    enabled: boolean;
+    busy: boolean;
+    ignoreFocusOut: boolean;
+    value: string;
+    placeholder: string | undefined;
+    password: boolean;
+    buttons: ReadonlyArray<TitleButton>;
+    prompt: string | undefined;
+    validationMessage: string | undefined;
+    validateInput(value: string): MaybePromise<string | undefined>;
+}
+
 export interface QuickOpenMain {
     $show(options: PickOptions): Promise<number | number[]>;
     $setItems(items: PickOpenItem[]): Promise<any>;
     $setError(error: Error): Promise<any>;
     $input(options: theia.InputBoxOptions, validateInput: boolean): Promise<string | undefined>;
+    $showInputBox(inputBox: ITransferInputBox): void;
+    $setInputBox(
+        busy: boolean,
+        buttons: ReadonlyArray<theia.QuickInputButton>,
+        enabled: boolean,
+        ignoreFocusOut: boolean,
+        password: boolean,
+        placeholder: string | undefined,
+        prompt: string | undefined,
+        step: number | undefined,
+        title: string | undefined,
+        totalSteps: number | undefined,
+        validationMessage: string | undefined,
+        value: string | undefined
+    ): void;
 }
 
 export interface WorkspaceMain {
