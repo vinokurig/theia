@@ -2167,6 +2167,11 @@ declare module '@theia/plugin' {
          * Return `undefined`, or the empty string when 'value' is valid.
          */
         validateInput?(value: string): string | undefined | PromiseLike<string | undefined>;
+
+        /**
+         * An optional function that will be called on Enter key.
+         */
+        onAccept?(): void;
     }
 
     /**
@@ -3430,6 +3435,197 @@ declare module '@theia/plugin' {
          * @return The thenable the task-callback returned.
          */
         export function withProgress<R>(options: ProgressOptions, task: (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => PromiseLike<R>): PromiseLike<R>;
+
+        /**
+         * Creates a [InputBox](#InputBox) to let the user enter some text input.
+         *
+         * Note that in many cases the more convenient [window.showInputBox](#window.showInputBox)
+         * is easier to use. [window.createInputBox](#window.createInputBox) should be used
+         * when [window.showInputBox](#window.showInputBox) does not offer the required flexibility.
+         *
+         * @return A new [InputBox](#InputBox).
+         */
+        export function createInputBox(): InputBox;
+    }
+
+    /**
+     * Predefined buttons for [QuickPick](#QuickPick) and [InputBox](#InputBox).
+     */
+    export class QuickInputButtons {
+
+        /**
+         * A back button for [QuickPick](#QuickPick) and [InputBox](#InputBox).
+         *
+         * When a navigation 'back' button is needed this one should be used for consistency.
+         * It comes with a predefined icon, tooltip and location.
+         */
+        static readonly Back: QuickInputButton;
+
+        /**
+         * @hidden
+         */
+        private constructor();
+    }
+
+    /**
+     * A concrete [QuickInput](#QuickInput) to let the user input a text value.
+     *
+     * Note that in many cases the more convenient [window.showInputBox](#window.showInputBox)
+     * is easier to use. [window.createInputBox](#window.createInputBox) should be used
+     * when [window.showInputBox](#window.showInputBox) does not offer the required flexibility.
+     */
+    export interface InputBox extends QuickInput {
+
+        /**
+         * Current input value.
+         */
+        value: string;
+
+        /**
+         * Optional placeholder in the filter text.
+         */
+        placeholder: string | undefined;
+
+        /**
+         * If the input value should be hidden. Defaults to false.
+         */
+        password: boolean;
+
+        /**
+         * An event signaling when the value has changed.
+         */
+        readonly onDidChangeValue: Event<string>;
+
+        /**
+         * An event signaling when the user indicated acceptance of the input value.
+         */
+        readonly onDidAccept: Event<void>;
+
+        /**
+         * Buttons for actions in the UI.
+         */
+        buttons: ReadonlyArray<QuickInputButton>;
+
+        /**
+         * An event signaling when a button was triggered.
+         */
+        readonly onDidTriggerButton: Event<QuickInputButton>;
+
+        /**
+         * An optional prompt text providing some ask or explanation to the user.
+         */
+        prompt: string | undefined;
+
+        /**
+         * An optional validation message indicating a problem with the current input value.
+         */
+        validationMessage: string | undefined;
+    }
+
+    /**
+     * A light-weight user input UI that is initially not visible. After
+     * configuring it through its properties the extension can make it
+     * visible by calling [QuickInput.show](#QuickInput.show).
+     *
+     * There are several reasons why this UI might have to be hidden and
+     * the extension will be notified through [QuickInput.onDidHide](#QuickInput.onDidHide).
+     * (Examples include: an explicit call to [QuickInput.hide](#QuickInput.hide),
+     * the user pressing Esc, some other input UI opening, etc.)
+     *
+     * A user pressing Enter or some other gesture implying acceptance
+     * of the current state does not automatically hide this UI component.
+     * It is up to the extension to decide whether to accept the user's input
+     * and if the UI should indeed be hidden through a call to [QuickInput.hide](#QuickInput.hide).
+     *
+     * When the extension no longer needs this input UI, it should
+     * [QuickInput.dispose](#QuickInput.dispose) it to allow for freeing up
+     * any resources associated with it.
+     *
+     * See [QuickPick](#QuickPick) and [InputBox](#InputBox) for concrete UIs.
+     */
+    export interface QuickInput {
+
+        /**
+         * An optional title.
+         */
+        title: string | undefined;
+
+        /**
+         * An optional current step count.
+         */
+        step: number | undefined;
+
+        /**
+         * An optional total step count.
+         */
+        totalSteps: number | undefined;
+
+        /**
+         * If the UI should allow for user input. Defaults to true.
+         *
+         * Change this to false, e.g., while validating user input or
+         * loading data for the next step in user input.
+         */
+        enabled: boolean;
+
+        /**
+         * If the UI should show a progress indicator. Defaults to false.
+         *
+         * Change this to true, e.g., while loading more data or validating
+         * user input.
+         */
+        busy: boolean;
+
+        /**
+         * If the UI should stay open even when loosing UI focus. Defaults to false.
+         */
+        ignoreFocusOut: boolean;
+
+        /**
+         * Makes the input UI visible in its current configuration. Any other input
+         * UI will first fire an [QuickInput.onDidHide](#QuickInput.onDidHide) event.
+         */
+        show(): void;
+
+        /**
+         * Hides this input UI. This will also fire an [QuickInput.onDidHide](#QuickInput.onDidHide)
+         * event.
+         */
+        hide(): void;
+
+        /**
+         * An event signaling when this input UI is hidden.
+         *
+         * There are several reasons why this UI might have to be hidden and
+         * the extension will be notified through [QuickInput.onDidHide](#QuickInput.onDidHide).
+         * (Examples include: an explicit call to [QuickInput.hide](#QuickInput.hide),
+         * the user pressing Esc, some other input UI opening, etc.)
+         */
+        onDidHide: Event<void>;
+
+        /**
+         * Dispose of this input UI and any associated resources. If it is still
+         * visible, it is first hidden. After this call the input UI is no longer
+         * functional and no additional methods or properties on it should be
+         * accessed. Instead a new input UI should be created.
+         */
+        dispose(): void;
+    }
+
+    /**
+     * Button for an action in a [QuickPick](#QuickPick) or [InputBox](#InputBox).
+     */
+    export interface QuickInputButton {
+
+        /**
+         * Icon for the button.
+         */
+        readonly iconPath: Uri | { light: Uri; dark: Uri } | ThemeIcon;
+
+        /**
+         * An optional tooltip.
+         */
+        readonly tooltip?: string | undefined;
     }
     /**
      * Value-object describing where and how progress should show.
@@ -7952,5 +8148,220 @@ declare module '@theia/plugin' {
          * the given `symbol` is used.
          */
         resolveWorkspaceSymbol?(symbol: SymbolInformation, token: CancellationToken | undefined): ProviderResult<SymbolInformation>;
+    }
+
+    /**
+     * Collapsible state of a [comment thread](#CommentThread)
+     */
+    export enum CommentThreadCollapsibleState {
+        /**
+         * Determines an item is collapsed
+         */
+        Collapsed = 0,
+
+        /**
+         * Determines an item is expanded
+         */
+        Expanded = 1
+    }
+
+    /**
+     * A collection of [comments](#Comment) representing a conversation at a particular range in a document.
+     */
+    export interface CommentThread {
+        /**
+         * A unique identifier of the comment thread.
+         */
+        readonly id: string;
+
+        /**
+         * The uri of the document the thread has been created on.
+         */
+        readonly resource: Uri;
+
+        /**
+         * The range the comment thread is located within the document. The thread icon will be shown
+         * at the first line of the range.
+         */
+        readonly range: Range;
+
+        /**
+         * The ordered comments of the thread.
+         */
+        comments: Comment[];
+
+        /**
+         * Whether the thread should be collapsed or expanded when opening the document.
+         * Defaults to Collapsed.
+         */
+        collapsibleState: CommentThreadCollapsibleState;
+
+        /**
+         * The optional human-readable label describing the [Comment Thread](#CommentThread)
+         */
+        label?: string;
+
+        /**
+         * Optional accept input command
+         *
+         * `acceptInputCommand` is the default action rendered on Comment Widget, which is always placed rightmost.
+         * This command will be invoked when users the user accepts the value in the comment editor.
+         * This command will disabled when the comment editor is empty.
+         */
+        acceptInputCommand?: Command;
+
+        /**
+         * Optional additonal commands.
+         *
+         * `additionalCommands` are the secondary actions rendered on Comment Widget.
+         */
+        additionalCommands?: Command[];
+
+        /**
+         * The command to be executed when users try to delete the comment thread. Currently, this is only called
+         * when the user collapses a comment thread that has no comments in it.
+         */
+        deleteCommand?: Command;
+
+        /**
+         * Dispose this comment thread.
+         *
+         * Once disposed, this comment thread will be removed from visible editors and Comment Panel when approriate.
+         */
+        dispose(): void;
+    }
+
+    /**
+     * Commenting range provider for a [comment controller](#CommentController).
+     */
+    export interface CommentingRangeProvider {
+        /**
+         * Provide a list of ranges which allow new comment threads creation or null for a given document
+         */
+        provideCommentingRanges(document: TextDocument, token: CancellationToken): ProviderResult<Range[]>;
+    }
+
+    /**
+     * Comment thread template for new comment thread creation.
+     */
+    export interface CommentThreadTemplate {
+        /**
+         * The human-readable label describing the [Comment Thread](#CommentThread)
+         */
+        readonly label: string;
+
+        /**
+         * Optional accept input command
+         *
+         * `acceptInputCommand` is the default action rendered on Comment Widget, which is always placed rightmost.
+         * This command will be invoked when users the user accepts the value in the comment editor.
+         * This command will disabled when the comment editor is empty.
+         */
+        readonly acceptInputCommand?: Command;
+
+        /**
+         * Optional additonal commands.
+         *
+         * `additionalCommands` are the secondary actions rendered on Comment Widget.
+         */
+        readonly additionalCommands?: Command[];
+
+        /**
+         * The command to be executed when users try to delete the comment thread. Currently, this is only called
+         * when the user collapses a comment thread that has no comments in it.
+         */
+        readonly deleteCommand?: Command;
+    }
+
+    /**
+     * The comment input box in Comment Widget.
+     */
+    export interface CommentInputBox {
+        /**
+         * Setter and getter for the contents of the comment input box
+         */
+        value: string;
+
+        /**
+         * The uri of the document comment input box has been created on
+         */
+        resource: Uri;
+
+        /**
+         * The range the comment input box is located within the document
+         */
+        range: Range;
+    }
+
+    /**
+     * A comment controller is able to provide [comments](#CommentThread) support to the editor and
+     * provide users various ways to interact with comments.
+     */
+    export interface CommentController {
+        /**
+         * The id of this comment controller.
+         */
+        readonly id: string;
+
+        /**
+         * The human-readable label of this comment controller.
+         */
+        readonly label: string;
+
+        /**
+         * The active [comment input box](#CommentInputBox) or `undefined`. The active `inputBox` is the input box of
+         * the comment thread widget that currently has focus. It's `undefined` when the focus is not in any CommentInputBox.
+         */
+        readonly inputBox: CommentInputBox | undefined;
+
+        /**
+         * Optional comment thread template information.
+         *
+         * The comment controller will use this information to create the comment widget when users attempt to create new comment thread
+         * from the gutter or command palette.
+         *
+         * When users run `CommentThreadTemplate.acceptInputCommand` or `CommentThreadTemplate.additionalCommands`, extensions should create
+         * the approriate [CommentThread](#CommentThread).
+         *
+         * If not provided, users won't be able to create new comment threads in the editor.
+         */
+        template?: CommentThreadTemplate;
+
+        /**
+         * Optional commenting range provider. Provide a list [ranges](#Range) which support commenting to any given resource uri.
+         *
+         * If not provided and `emptyCommentThreadFactory` exits, users can leave comments in any document opened in the editor.
+         */
+        commentingRangeProvider?: CommentingRangeProvider;
+
+        /**
+         * Create a [comment thread](#CommentThread). The comment thread will be displayed in visible text editors (if the resource matches)
+         * and Comments Panel once created.
+         *
+         * @param id An `id` for the comment thread.
+         * @param resource The uri of the document the thread has been created on.
+         * @param range The range the comment thread is located within the document.
+         * @param comments The ordered comments of the thread.
+         */
+        createCommentThread(id: string, resource: Uri, range: Range, comments: Comment[]): CommentThread;
+
+        /**
+         * Dispose this comment controller.
+         *
+         * Once disposed, all [comment threads](#CommentThread) created by this comment controller will also be removed from the editor
+         * and Comments Panel.
+         */
+        dispose(): void;
+    }
+
+    namespace comment {
+        /**
+         * Creates a new [comment controller](#CommentController) instance.
+         *
+         * @param id An `id` for the comment controller.
+         * @param label A human-readable string for the comment controller.
+         * @return An instance of [comment controller](#CommentController).
+         */
+        export function createCommentController(id: string, label: string): CommentController;
     }
 }

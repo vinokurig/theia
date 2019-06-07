@@ -9,6 +9,7 @@ Breaking changes:
   - `URI.withoutScheme` is removed, in order to get a path use `URI.path`
 - [debug] align commands with VS Code [#5102](https://github.com/theia-ide/theia/issues/5102)
     - `debug.restart` renamed to `workbench.action.debug.restart`
+- [plugin-ext] improved QuickInput and InputBox API's
 
 ## v0.7.0
 

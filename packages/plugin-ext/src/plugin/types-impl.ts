@@ -1226,6 +1226,25 @@ export enum FileChangeType {
     Deleted = 3,
 }
 
+export enum CommentThreadCollapsibleState {
+    Collapsed = 0,
+    Expanded = 1
+}
+
+export interface QuickInputButton {
+    readonly iconPath: URI | { light: string | URI; dark: string | URI } | ThemeIcon;
+    readonly tooltip?: string | undefined;
+}
+
+export class QuickInputButtons {
+    static readonly Back: QuickInputButton = {
+        iconPath: {
+            id: 'Back'
+        },
+        tooltip: 'Back'
+    };
+}
+
 export class FileSystemError extends Error {
 
     static FileExists(messageOrUri?: string | URI): FileSystemError {

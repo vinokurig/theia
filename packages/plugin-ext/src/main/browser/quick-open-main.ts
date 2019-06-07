@@ -18,9 +18,9 @@ import { InputBoxOptions } from '@theia/plugin';
 import { interfaces } from 'inversify';
 import { QuickOpenModel, QuickOpenItem, QuickOpenMode } from '@theia/core/lib/browser/quick-open/quick-open-model';
 import { RPCProtocol } from '../../api/rpc-protocol';
-import { QuickOpenExt, QuickOpenMain, MAIN_RPC_CONTEXT, PickOptions, PickOpenItem } from '../../api/plugin-api';
+import { QuickOpenExt, QuickOpenMain, MAIN_RPC_CONTEXT, PickOptions, PickOpenItem, ITransferInputBox } from '../../api/plugin-api';
 import { MonacoQuickOpenService } from '@theia/monaco/lib/browser/monaco-quick-open-service';
-import { QuickInputService } from '@theia/core/lib/browser';
+import { QuickInputService, TitleButton } from '@theia/core/lib/browser';
 
 export class QuickOpenMainImpl implements QuickOpenMain, QuickOpenModel {
 
@@ -37,6 +37,8 @@ export class QuickOpenMainImpl implements QuickOpenMain, QuickOpenModel {
         this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.QUICK_OPEN_EXT);
         this.delegate = container.get(MonacoQuickOpenService);
         this.quickInput = container.get(QuickInputService);
+        this.quickInput.onDidAccept(() => this.proxy.$acceptInput());
+        this.quickInput.onDidHide(() => this.proxy.$acceptHide());
     }
 
     private cleanUp() {
@@ -101,6 +103,52 @@ export class QuickOpenMainImpl implements QuickOpenMain, QuickOpenModel {
         }
 
         return this.quickInput.open(options);
+    }
+
+    $showInputBox(inputBox: ITransferInputBox): void {
+        inputBox.validateInput = val => this.proxy.$validateInput(val);
+        this.quickInput.open({
+            busy: inputBox.busy,
+            enabled: inputBox.enabled,
+            ignoreFocusOut: inputBox.ignoreFocusOut,
+            password: inputBox.password,
+            step: inputBox.step,
+            title: inputBox.title,
+            totalSteps: inputBox.totalSteps,
+            buttons: inputBox.buttons,
+            validationMessage: inputBox.validationMessage,
+            placeHolder: inputBox.placeholder,
+            value: inputBox.value,
+            prompt: inputBox.prompt,
+            validateInput: inputBox.validateInput
+        });
+        this.quickInput.titlePanel.onDidTriggerButton(button => {
+            this.proxy.$acceptButton(button);
+        });
+    }
+
+    $setInputBox(
+        busy: boolean,
+        buttons: TitleButton[],
+        enabled: boolean,
+        ignoreFocusOut: boolean,
+        password: boolean,
+        placeholder: string,
+        prompt: string | undefined,
+        step: number | undefined,
+        title: string | undefined,
+        totalSteps: number | undefined,
+        validationMessage: string | undefined,
+        value: string | undefined) {
+
+        this.quickInput.setTitle(title);
+        this.quickInput.setStep(step);
+        this.quickInput.setTotalSteps(totalSteps);
+        this.quickInput.setButtons(buttons);
+        this.delegate.setValue(value);
+        this.delegate.setEnabled(enabled);
+        this.delegate.setPassword(password);
+        this.delegate.setPlaceHolder(placeholder);
     }
 
     onType(lookFor: string, acceptor: (items: QuickOpenItem[]) => void): void {

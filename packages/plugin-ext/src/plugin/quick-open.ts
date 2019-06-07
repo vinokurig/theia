@@ -13,15 +13,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
-import { QuickOpenExt, PLUGIN_RPC_CONTEXT as Ext, QuickOpenMain, PickOpenItem } from '../api/plugin-api';
-import { QuickPickOptions, QuickPickItem, InputBoxOptions } from '@theia/plugin';
+import { QuickOpenExt, PLUGIN_RPC_CONTEXT as Ext, QuickOpenMain, PickOpenItem, ITransferInputBox } from '../api/plugin-api';
+import { QuickPickOptions, QuickPickItem, InputBoxOptions, InputBox, QuickInputButton, QuickPick } from '@theia/plugin';
 import { CancellationToken } from '@theia/core/lib/common/cancellation';
 import { RPCProtocol } from '../api/rpc-protocol';
 import { anyPromise } from '../api/async-util';
 import { hookCancellationToken } from '../api/async-util';
 import { Emitter, Event } from '@theia/core/lib/common/event';
-import { QuickPick, QuickInputButton } from '@theia/plugin';
 import { DisposableCollection } from '@theia/core/lib/common/disposable';
+import { TitleButton } from '@theia/core/lib/browser/quick-open/quick-open-service';
 
 export type Item = string | QuickPickItem;
 
@@ -29,9 +29,15 @@ export class QuickOpenExtImpl implements QuickOpenExt {
     private proxy: QuickOpenMain;
     private selectItemHandler: undefined | ((handle: number) => void);
     private validateInputHandler: undefined | ((input: string) => string | PromiseLike<string | undefined> | undefined);
+    private onDidAcceptInputEmitter: Emitter<void>;
+    private onDidHideEmitter: Emitter<void>;
+    private onDidTriggerButtonEmitter: Emitter<QuickInputButton>;
 
     constructor(rpc: RPCProtocol) {
         this.proxy = rpc.getProxy(Ext.QUICK_OPEN_MAIN);
+        this.onDidAcceptInputEmitter = new Emitter();
+        this.onDidHideEmitter = new Emitter();
+        this.onDidTriggerButtonEmitter = new Emitter();
     }
     $onItemSelected(handle: number): void {
         if (this.selectItemHandler) {
@@ -129,6 +135,255 @@ export class QuickOpenExtImpl implements QuickOpenExt {
         return hookCancellationToken(token, promise);
     }
 
+    showInputBox(options: ITransferInputBox): void {
+        this.validateInputHandler = options && options.validateInput;
+        this.proxy.$showInputBox(options);
+    }
+
+    createInputBox(): InputBox {
+        return new InputBoxExt(this, this.onDidAcceptInputEmitter, this.onDidHideEmitter, this.onDidTriggerButtonEmitter, this.proxy);
+    }
+
+    async $acceptInput(): Promise<void> {
+        this.onDidAcceptInputEmitter.fire(undefined);
+    }
+
+    async $acceptHide(): Promise<void> {
+        this.onDidHideEmitter.fire(undefined);
+    }
+
+    async $acceptButton(btn: QuickInputButton): Promise<void> {
+        this.onDidTriggerButtonEmitter.fire(btn);
+    }
+}
+
+/**
+ * Base implementation of {@link InputBox} that uses {@link QuickOpenExt}.
+ * Missing functionality is going to be implemented in the scope of https://github.com/theia-ide/theia/issues/5109
+ */
+export class InputBoxExt implements InputBox {
+
+    private _busy: boolean;
+    private _buttons: ReadonlyArray<QuickInputButton>;
+    private _enabled: boolean;
+    private _ignoreFocusOut: boolean;
+    private _password: boolean;
+    private _placeholder: string | undefined;
+    private _prompt: string | undefined;
+    private _step: number | undefined;
+    private _title: string | undefined;
+    private _totalSteps: number | undefined;
+    private _validationMessage: string | undefined;
+    private _value: string;
+
+    private readonly disposables: DisposableCollection;
+    private readonly onDidChangeValueEmitter: Emitter<string>;
+    private visible: boolean;
+
+    constructor(readonly quickOpen: QuickOpenExtImpl,
+        readonly onDidAcceptEmitter: Emitter<void>,
+        readonly onDidHideEmitter: Emitter<void>,
+        readonly onDidTriggerButtonEmitter: Emitter<QuickInputButton>,
+        readonly quickOpenMain: QuickOpenMain) {
+
+        this.disposables = new DisposableCollection();
+        this.disposables.push(this.onDidChangeValueEmitter = new Emitter());
+        this.visible = false;
+
+        this.buttons = [];
+        this.enabled = true;
+        this.busy = false;
+        this.ignoreFocusOut = false;
+        this.password = false;
+        this.value = '';
+    }
+
+    get onDidChangeValue(): Event<string> {
+        return this.onDidChangeValueEmitter.event;
+    }
+
+    get onDidAccept(): Event<void> {
+        return this.onDidAcceptEmitter.event;
+    }
+
+    get onDidHide(): Event<void> {
+        this.visible = false;
+        return this.onDidHideEmitter.event;
+    }
+
+    get onDidTriggerButton(): Event<QuickInputButton> {
+        return this.onDidTriggerButtonEmitter.event;
+    }
+
+    get title(): string | undefined {
+        return this._title;
+    }
+
+    set title(title: string | undefined) {
+        this._title = title;
+        this.update();
+    }
+
+    get step(): number | undefined {
+        return this._step;
+    }
+
+    set step(step: number | undefined) {
+        this._step = step;
+        this.update();
+    }
+
+    get totalSteps(): number | undefined {
+        return this._totalSteps;
+    }
+
+    set totalSteps(totalSteps: number | undefined) {
+        this._totalSteps = totalSteps;
+        this.update();
+    }
+
+    get enabled(): boolean {
+        return this._enabled;
+    }
+
+    set enabled(enabled: boolean) {
+        this._enabled = enabled;
+        this.update();
+    }
+
+    get busy(): boolean {
+        return this._busy;
+    }
+
+    set busy(busy: boolean) {
+        this._busy = busy;
+        this.update();
+    }
+
+    get ignoreFocusOut(): boolean {
+        return this._ignoreFocusOut;
+    }
+
+    set ignoreFocusOut(ignoreFocusOut: boolean) {
+        this._ignoreFocusOut = ignoreFocusOut;
+        this.update();
+    }
+
+    get buttons(): ReadonlyArray<QuickInputButton> {
+        return this._buttons;
+    }
+
+    set buttons(buttons: ReadonlyArray<QuickInputButton>) {
+        this._buttons = buttons;
+        this.update();
+    }
+
+    get password(): boolean {
+        return this._password;
+    }
+
+    set password(password: boolean) {
+        this._password = password;
+        this.update();
+    }
+
+    get placeholder(): string | undefined {
+        return this._placeholder;
+    }
+
+    set placeholder(placeholder: string | undefined) {
+        this._placeholder = placeholder;
+        this.update();
+    }
+
+    get prompt(): string | undefined {
+        return this._prompt;
+    }
+
+    set prompt(prompt: string | undefined) {
+        this._prompt = prompt;
+        this.update();
+    }
+
+    get validationMessage(): string | undefined {
+        return this._validationMessage;
+    }
+
+    set validationMessage(validationMessage: string | undefined) {
+        this._validationMessage = validationMessage;
+        this.update();
+    }
+
+    get value(): string {
+        return this._value;
+    }
+
+    set value(value: string) {
+        this._value = value;
+        this.update();
+    }
+
+    protected update(): void {
+        /**
+         * The args are just going to be set when we call show for the first time.
+         * We return early when its invisible to avoid race condition
+         */
+        if (!this.visible) {
+            return;
+        }
+
+        this.quickOpenMain.$setInputBox(
+            this.busy,
+            this.buttons,
+            this.enabled,
+            this.ignoreFocusOut,
+            this.password,
+            this.placeholder,
+            this.prompt,
+            this.step,
+            this.title,
+            this.totalSteps,
+            this.validationMessage,
+            this.value
+        );
+    }
+
+    dispose(): void {
+        this.disposables.dispose();
+    }
+
+    hide(): void {
+        this.dispose();
+    }
+
+    show(): void {
+        const update = (value: string) => {
+            this.onDidChangeValueEmitter.fire(value);
+            if (this.validationMessage && this.validationMessage.length > 0) {
+                return this.validationMessage;
+            }
+        };
+        this.quickOpen.showInputBox({
+            busy: this.busy,
+            buttons: this.buttons as ReadonlyArray<TitleButton>,
+            enabled: this.enabled,
+            ignoreFocusOut: this.ignoreFocusOut,
+            password: this.password,
+            placeholder: this.placeholder,
+            prompt: this.prompt,
+            step: this.step,
+            title: this.title,
+            totalSteps: this.totalSteps,
+            validationMessage: this.validationMessage,
+            value: this.value,
+            validateInput(value: string): string | undefined {
+                if (value.length > 0) {
+                    return update(value);
+                }
+            }
+        });
+        this.visible = true;
+    }
 }
 
 /**

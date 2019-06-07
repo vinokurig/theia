@@ -17,6 +17,12 @@
 import { injectable } from 'inversify';
 import { QuickOpenModel } from './quick-open-model';
 import { MessageType } from '../../common/message-service-protocol';
+import URI from 'vscode-uri';
+
+export interface TitleButton {
+    iconPath: URI | { dark: URI, light: URI } | { id: string };
+    tooltip?: string | undefined;
+}
 
 export type QuickOpenOptions = Partial<QuickOpenOptions.Resolved>;
 export namespace QuickOpenOptions {
@@ -27,6 +33,9 @@ export namespace QuickOpenOptions {
         enableSeparateSubstringMatching?: boolean
     }
     export interface Resolved {
+        readonly busy: boolean
+        readonly enabled: boolean;
+
         readonly prefix: string;
         readonly placeholder: string;
         readonly ignoreFocusOut: boolean;
@@ -55,6 +64,13 @@ export namespace QuickOpenOptions {
         onClose(canceled: boolean): void;
     }
     export const defaultOptions: Resolved = Object.freeze({
+        busy: false,
+        enabled: true,
+        step: undefined,
+        title: undefined,
+        totalSteps: undefined,
+        buttons: [],
+
         prefix: '',
         placeholder: '',
         ignoreFocusOut: false,
@@ -86,4 +102,9 @@ export class QuickOpenService {
     open(model: QuickOpenModel, options?: QuickOpenOptions): void { }
     showDecoration(type: MessageType): void { }
     hideDecoration(): void { }
+
+    /**
+     * Dom node of the QuickOpenWidget
+     */
+    widgetNode: HTMLElement;
 }
